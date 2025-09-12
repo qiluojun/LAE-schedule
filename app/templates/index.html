@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAE - 个人日程与主支线管理系统 v16 Summary Stats</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
+    <!-- SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        .time-slot {
+            min-height: 80px;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+            transition: background-color 0.2s;
+        }
+        .time-slot:hover {
+            background-color: #e9ecef;
+        }
+        .time-slot.occupied {
+            background-color: #d4edda;
+        }
+        .activity-card {
+            cursor: grab;
+            transition: transform 0.2s;
+        }
+        .activity-card:hover {
+            transform: translateY(-2px);
+        }
+        .activity-card:active {
+            cursor: grabbing;
+        }
+        .sortable-chosen {
+            opacity: 0.8;
+            transform: rotate(3deg);
+        }
+        .sortable-drag {
+            opacity: 0.8;
+            transform: rotate(5deg);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #e3f2fd;
+            border: 2px dashed #2196f3;
+        }
+        .time-slot.sortable-over {
+            background-color: #e8f5e8;
+            border-color: #4caf50;
+            transform: scale(1.02);
+        }
+        .scheduled-event {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            cursor: pointer;
+        }
+        .scheduled-event:hover {
+            background-color: #fff2a8;
+        }
+        .activity-pool {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+        }
+        .week-grid {
+            display: grid;
+            grid-template-columns: auto repeat(7, 1fr);
+            gap: 1px;
+            background-color: #dee2e6;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .week-header {
+            background-color: #6c757d;
+            color: white;
+            text-align: center;
+            padding: 0.5rem;
+            font-weight: bold;
+        }
+        .time-label {
+            background-color: #495057;
+            color: white;
+            text-align: center;
+            padding: 0.75rem 0.5rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div x-data="laeApp()" class="container-fluid">
+        <!-- 导航栏 -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
+            <div class="container-fluid">
+                <span class="navbar-brand">LAE - 日程管理系统</span>
+                
+                <!-- 视图切换按钮 -->
+                <div class="navbar-nav me-auto">
+                    <button 
+                        class="nav-link btn btn-link"
+                        :class="{ 'active text-warning': currentView === 'summary' }"
+                        @click="switchView('summary')"
+                    >
+                        汇总视图
+                    </button>
+                    <button 
+                        class="nav-link btn btn-link"
+                        :class="{ 'active text-warning': currentView === 'week' }"
+                        @click="switchView('week')"
+                    >
+                        周视图
+                    </button>
+                    <button 
+                        class="nav-link btn btn-link"
+                        :class="{ 'active text-warning': currentView === 'month' }"
+                        @click="switchView('month')"
+                    >
+                        月视图
+                    </button>
+                </div>
+                
+                <!-- 当前日期显示 -->
+                <div class="navbar-text text-light">
+                    <span x-text="getCurrentDateString()"></span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 汇总视图 -->
+        <div x-show="currentView === 'summary'" class="row">
+            <!-- 统计仪表板 -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">数据统计</h5>
+                        <div class="d-flex align-items-center">
+                            <select class="form-select form-select-sm me-2" x-model="summaryMonth" @change="loadSummaryStatistics()">
+                                <option value="">全部时间</option>
+                                <template x-for="month in availableMonths" :key="month.value">
+                                    <option :value="month.value" x-text="month.label"></option>
+                                </template>
+                            </select>
+                            <button class="btn btn-outline-primary btn-sm" @click="loadSummaryStatistics()">
+                                📊 刷新统计
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" x-show="summaryStats">
+                            <div class="col-md-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body text-center">
+                                        <h4 x-text="summaryStats?.total_events || 0"></h4>
+                                        <p class="mb-0">总安排次数</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body text-center">
+                                        <h4 x-text="summaryStats?.completed_events || 0"></h4>
+                                        <p class="mb-0">已完成次数</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body text-center">
+                                        <h4 x-text="Math.round((summaryStats?.completion_rate || 0) * 100) + '%'"></h4>
+                                        <p class="mb-0">完成率</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body text-center">
+                                        <h4 x-text="summaryStats?.total_activities || 0"></h4>
+                                        <p class="mb-0">活动总数</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 活动管理 -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">活动管理</h5>
+                        <button class="btn btn-primary btn-sm" @click="showNewActivityModal = true">
+                            + 新建活动
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="activity-tree" class="mt-3">
+                            <!-- 活动树将在这里渲染 -->
+                            <div x-html="renderActivityTreeWithStats()"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 周视图 -->
+        <div x-show="currentView === 'week'" class="row">
+            <!-- 活动池 -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">活动卡片池</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-pool" id="activity-pool">
+                            <template x-for="activity in flatActivities" :key="activity.id">
+                                <div class="activity-card card mb-2" 
+                                     :data-activity-id="activity.id">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="fw-bold" style="font-size: 0.875rem;" x-text="activity.name"></div>
+                                        <small class="text-muted" x-text="activity.description || ''"></small>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 周日程网格 -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <button class="btn btn-outline-primary btn-sm" @click="previousWeek()">
+                                ‹ 上一周
+                            </button>
+                            <span class="mx-3 fw-bold" x-text="getWeekTitle()"></span>
+                            <button class="btn btn-outline-primary btn-sm" @click="nextWeek()">
+                                下一周 ›
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="week-grid" id="week-grid" x-html="renderFullWeekGrid()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 月视图 -->
+        <div x-show="currentView === 'month'">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" @click="previousMonth()">
+                            ‹ 上个月
+                        </button>
+                        <span class="mx-3 fw-bold" x-text="getMonthTitle()"></span>
+                        <button class="btn btn-outline-primary btn-sm" @click="nextMonth()">
+                            下个月 ›
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center fw-bold mb-2">
+                        <div class="col">周一</div>
+                        <div class="col">周二</div>
+                        <div class="col">周三</div>
+                        <div class="col">周四</div>
+                        <div class="col">周五</div>
+                        <div class="col">周六</div>
+                        <div class="col">周日</div>
+                    </div>
+                    <div id="month-calendar">
+                        <!-- 月历将在这里渲染 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新建活动模态框 -->
+        <div x-show="showNewActivityModal" class="modal" :class="{ 'd-block': showNewActivityModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">新建活动</h5>
+                        <button type="button" class="btn-close" @click="showNewActivityModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="createActivity()">
+                            <div class="mb-3">
+                                <label class="form-label">活动名称</label>
+                                <input type="text" class="form-control" x-model="newActivity.name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">父活动</label>
+                                <select class="form-control" x-model="newActivity.parent_id">
+                                    <option value="">无（顶级活动）</option>
+                                    <template x-for="activity in flatActivities" :key="activity.id">
+                                        <option :value="activity.id" x-text="activity.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">描述</label>
+                                <textarea class="form-control" rows="3" x-model="newActivity.description"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showNewActivityModal = false">取消</button>
+                                <button type="submit" class="btn btn-primary">创建</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑活动模态框 -->
+        <div x-show="showEditActivityModal" class="modal" :class="{ 'd-block': showEditActivityModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">编辑活动</h5>
+                        <button type="button" class="btn-close" @click="showEditActivityModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="updateActivity()">
+                            <div class="mb-3">
+                                <label class="form-label">活动名称</label>
+                                <input type="text" class="form-control" x-model="editingActivity.name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">描述</label>
+                                <textarea class="form-control" rows="3" x-model="editingActivity.description"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showEditActivityModal = false">取消</button>
+                                <button type="submit" class="btn btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑日程模态框 - 只在周视图中显示 -->
+        <div x-show="showEditEventModal && currentView === 'week'" class="modal" :class="{ 'd-block': showEditEventModal && currentView === 'week' }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">编辑日程</h5>
+                        <button type="button" class="btn-close" @click="forceCloseModal()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="saveScheduledEvent()">
+                            <div class="mb-3">
+                                <label class="form-label">日期时间</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <input type="date" class="form-control" x-model="editingEvent.event_date" required readonly>
+                                    </div>
+                                    <div class="col-4">
+                                        <select class="form-control" x-model="editingEvent.time_slot" required>
+                                            <template x-for="slot in timeSlots" :key="slot.value">
+                                                <option :value="slot.value" x-text="slot.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3" x-show="editingEvent.activity_name">
+                                <label class="form-label">活动</label>
+                                <input type="text" class="form-control" :value="editingEvent.activity_name" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">目标</label>
+                                <input type="text" class="form-control" x-model="editingEvent.goal" placeholder="本次要达成的具体目标">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">备注</label>
+                                <textarea class="form-control" rows="3" x-model="editingEvent.notes" placeholder="额外备注信息"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">状态</label>
+                                <select class="form-control" x-model="editingEvent.status">
+                                    <option value="planned">计划中</option>
+                                    <option value="completed">已完成</option>
+                                </select>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-danger me-2" @click="deleteScheduledEvent()" x-show="editingEvent.id">删除</button>
+                                <button type="button" class="btn btn-secondary me-2" @click="forceCloseModal()">取消</button>
+                                <button type="submit" class="btn btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 直接嵌入JavaScript代码以避免路径问题
+        function laeApp() {
+            return {
+                // 当前视图状态
+                currentView: 'week',
+                
+                // 日期状态
+                currentDate: new Date(),
+                currentWeekStart: null,
+                currentMonth: new Date().getMonth() + 1,
+                currentYear: new Date().getFullYear(),
+                
+                // 数据状态
+                activities: [],
+                flatActivities: [],
+                weekSchedule: {},
+                monthSchedule: {},
+                
+                // 汇总视图数据
+                summaryStats: null,
+                summaryMonth: '',
+                availableMonths: [],
+                activityStats: {},
+                
+                // 时间槽配置
+                timeSlots: [
+                    { value: 21, name: '上午第1时段' },
+                    { value: 22, name: '上午第2时段' },
+                    { value: 51, name: '下午第1时段' },
+                    { value: 52, name: '下午第2时段' },
+                    { value: 71, name: '晚上时段' }
+                ],
+                
+                // 模态框状态
+                showNewActivityModal: false,
+                showEditActivityModal: false,
+                showEditEventModal: false,
+                
+                // 表单数据
+                newActivity: {
+                    name: '',
+                    parent_id: '',
+                    description: ''
+                },
+                
+                editingActivity: {
+                    id: null,
+                    name: '',
+                    description: ''
+                },
+                
+                editingEvent: {
+                    id: null,
+                    activity_id: null,
+                    activity_name: '',
+                    event_date: '',
+                    time_slot: 21,
+                    goal: '',
+                    notes: '',
+                    status: 'planned'
+                },
+                
+                // 周数据
+                weekDates: [],
+                
+                // 强制关闭模态框
+                forceCloseModal() {
+                    console.log('Force closing modal');
+                    console.log('Before reset - showEditEventModal:', this.showEditEventModal);
+                    console.log('Before reset - currentView:', this.currentView);
+                    
+                    this.showEditEventModal = false;
+                    this.showNewActivityModal = false;
+                    this.showEditActivityModal = false;
+                    
+                    console.log('After reset - showEditEventModal:', this.showEditEventModal);
+                    console.log('Modal condition check:', this.showEditEventModal && this.currentView === 'week');
+                    
+                    // 重置编辑事件数据
+                    this.editingEvent = {
+                        id: null,
+                        activity_id: null,
+                        activity_name: '',
+                        event_date: '',
+                        time_slot: 21,
+                        goal: '',
+                        notes: '',
+                        status: 'planned'
+                    };
+                    
+                    // 重置编辑活动数据
+                    this.editingActivity = {
+                        id: null,
+                        name: '',
+                        description: ''
+                    };
+                },
+                
+                // 初始化
+                async init() {
+                    console.log('Initializing LAE App... v9 - Debug Enhanced');
+                    console.log('Initial view:', this.currentView);
+                    console.log('Time slots configuration:', this.timeSlots);
+                    
+                    // 创建全局引用以便HTML onclick访问
+                    window.laeAppInstance = this;
+                    
+                    // 强制重置所有模态框状态
+                    this.forceCloseModal();
+                    
+                    await this.loadActivities();
+                    console.log('Activities loaded, count:', this.flatActivities.length);
+                    
+                    this.updateWeekDates();
+                    console.log('Week dates updated:', this.weekDates);
+                    
+                    // 根据当前视图加载数据
+                    if (this.currentView === 'week') {
+                        await this.loadWeekSchedule();
+                    } else if (this.currentView === 'month') {
+                        await this.loadMonthSchedule();
+                    } else if (this.currentView === 'summary') {
+                        await this.initSummaryData();
+                    }
+                    
+                    // 确保DOM渲染完成后初始化拖拽功能
+                    this.$nextTick(() => {
+                        console.log('DOM updated, initializing drag and drop in 300ms...');
+                        
+                        // 如果是周视图，手动渲染网格
+                        if (this.currentView === 'week') {
+                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                            if (gridContainer) {
+                                gridContainer.innerHTML = this.renderFullWeekGrid();
+                                console.log('Week grid manually rendered');
+                            }
+                        }
+                        
+                        setTimeout(() => {
+                            this.initDragAndDrop();
+                        }, 300);
+                    });
+                },
+                
+                // API调用方法
+                async apiCall(endpoint, options = {}) {
+                    try {
+                        const response = await fetch(`/api${endpoint}`, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...options.headers
+                            },
+                            ...options
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`API错误: ${response.status}`);
+                        }
+                        
+                        return await response.json();
+                    } catch (error) {
+                        console.error('API调用失败:', error);
+                        alert('操作失败: ' + error.message);
+                        throw error;
+                    }
+                },
+                
+                // 加载活动数据
+                async loadActivities() {
+                    try {
+                        this.activities = await this.apiCall('/activities/tree');
+                        this.flatActivities = await this.apiCall('/activities/');
+                        console.log('Activities loaded:', this.flatActivities.length);
+                    } catch (error) {
+                        console.error('加载活动失败:', error);
+                    }
+                },
+                
+                // 创建新活动
+                async createActivity() {
+                    try {
+                        const activityData = {
+                            name: this.newActivity.name,
+                            description: this.newActivity.description || null,
+                            parent_id: this.newActivity.parent_id || null
+                        };
+                        
+                        await this.apiCall('/activities/', {
+                            method: 'POST',
+                            body: JSON.stringify(activityData)
+                        });
+                        
+                        // 重新加载数据
+                        await this.loadActivities();
+                        
+                        // 关闭模态框并重置表单
+                        this.showNewActivityModal = false;
+                        this.newActivity = { name: '', parent_id: '', description: '' };
+                        
+                        // 如果在汇总视图，重新加载统计数据
+                        if (this.currentView === 'summary') {
+                            await this.initSummaryData();
+                        }
+                        
+                    } catch (error) {
+                        console.error('创建活动失败:', error);
+                    }
+                },
+                
+                // 编辑活动
+                editActivity(activityId) {
+                    const activity = this.flatActivities.find(a => a.id === activityId);
+                    if (!activity) {
+                        console.error('Activity not found:', activityId);
+                        return;
+                    }
+                    
+                    this.editingActivity = {
+                        id: activity.id,
+                        name: activity.name,
+                        description: activity.description || ''
+                    };
+                    
+                    this.showEditActivityModal = true;
+                },
+                
+                // 更新活动
+                async updateActivity() {
+                    try {
+                        const activityData = {
+                            name: this.editingActivity.name,
+                            description: this.editingActivity.description || null
+                        };
+                        
+                        await this.apiCall(`/activities/${this.editingActivity.id}`, {
+                            method: 'PUT',
+                            body: JSON.stringify(activityData)
+                        });
+                        
+                        // 重新加载数据
+                        await this.loadActivities();
+                        
+                        // 关闭模态框并重置表单
+                        this.showEditActivityModal = false;
+                        this.editingActivity = { id: null, name: '', description: '' };
+                        
+                        // 如果在汇总视图，重新加载统计数据
+                        if (this.currentView === 'summary') {
+                            await this.initSummaryData();
+                        }
+                        
+                    } catch (error) {
+                        console.error('更新活动失败:', error);
+                    }
+                },
+                
+                // 视图切换
+                async switchView(view) {
+                    console.log('Switching from', this.currentView, 'to', view);
+                    this.currentView = view;
+                    
+                    // 切换视图时清理所有模态框状态
+                    this.showNewActivityModal = false;
+                    this.showEditActivityModal = false;
+                    this.showEditEventModal = false;
+                    
+                    if (view === 'week') {
+                        console.log('Entering week view...');
+                        console.log('Current week dates:', this.weekDates);
+                        console.log('Time slots:', this.timeSlots);
+                        
+                        await this.loadWeekSchedule();
+                        
+                        // 强制重新渲染网格
+                        this.$nextTick(() => {
+                            // 手动触发重新渲染
+                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                            if (gridContainer) {
+                                gridContainer.innerHTML = this.renderFullWeekGrid();
+                            }
+                            
+                            console.log('Week view DOM updated, checking elements...');
+                            console.log('Activity pool element:', document.getElementById('activity-pool'));
+                            console.log('Week grid element:', document.getElementById('week-grid'));
+                            console.log('Time slot elements:', document.querySelectorAll('.time-slot').length);
+                            
+                            setTimeout(() => {
+                                this.initDragAndDrop();
+                            }, 200);
+                        });
+                    } else if (view === 'month') {
+                        await this.loadMonthSchedule();
+                    } else if (view === 'summary') {
+                        await this.initSummaryData();
+                    }
+                },
+                
+                // 周视图相关方法
+                updateWeekDates() {
+                    const start = new Date(this.currentDate);
+                    start.setDate(start.getDate() - start.getDay() + 1); // 获取周一
+                    this.currentWeekStart = new Date(start);
+                    
+                    this.weekDates = [];
+                    for (let i = 0; i < 7; i++) {
+                        const date = new Date(start);
+                        date.setDate(start.getDate() + i);
+                        this.weekDates.push(date.toISOString().split('T')[0]);
+                    }
+                },
+                
+                async loadWeekSchedule() {
+                    try {
+                        const targetDate = this.weekDates[0]; // 周一
+                        console.log('Loading week schedule for:', targetDate);
+                        const data = await this.apiCall(`/calendar/week/${targetDate}`);
+                        
+                        // 转换数据格式以便查找
+                        this.weekSchedule = {};
+                        data.schedule.forEach(day => {
+                            this.weekSchedule[day.date] = day.slots;
+                        });
+                        console.log('Week schedule loaded:', this.weekSchedule);
+                        console.log('Schedule data structure:', data);
+                    } catch (error) {
+                        console.error('加载周日程失败:', error);
+                        // 即使加载失败也要初始化空的周日程对象
+                        this.weekSchedule = {};
+                    }
+                },
+                
+                getScheduledEvent(date, timeSlot) {
+                    return this.weekSchedule[date]?.[timeSlot] || null;
+                },
+                
+                previousWeek() {
+                    this.currentDate.setDate(this.currentDate.getDate() - 7);
+                    this.updateWeekDates();
+                    this.loadWeekSchedule();
+                },
+                
+                nextWeek() {
+                    this.currentDate.setDate(this.currentDate.getDate() + 7);
+                    this.updateWeekDates();
+                    this.loadWeekSchedule();
+                },
+                
+                // 日程编辑
+                editScheduledEvent(date, timeSlot) {
+                    console.log('Editing event for:', date, timeSlot, 'Current view:', this.currentView);
+                    
+                    // 只在周视图中允许编辑
+                    if (this.currentView !== 'week') {
+                        console.log('Edit event modal blocked - not in week view');
+                        return;
+                    }
+                    
+                    const event = this.getScheduledEvent(date, timeSlot);
+                    
+                    if (event) {
+                        // 编辑现有事件
+                        this.editingEvent = {
+                            id: event.id,
+                            activity_id: event.activity_id,
+                            activity_name: event.activity_name,
+                            event_date: date,
+                            time_slot: timeSlot,
+                            goal: event.goal || '',
+                            notes: event.notes || '',
+                            status: event.status
+                        };
+                    } else {
+                        // 创建新事件（但需要先选择活动）
+                        this.editingEvent = {
+                            id: null,
+                            activity_id: null,
+                            activity_name: '',
+                            event_date: date,
+                            time_slot: timeSlot,
+                            goal: '',
+                            notes: '',
+                            status: 'planned'
+                        };
+                    }
+                    
+                    this.showEditEventModal = true;
+                },
+                
+                async saveScheduledEvent() {
+                    try {
+                        if (!this.editingEvent.activity_id) {
+                            alert('请先拖拽活动到时间槽中');
+                            return;
+                        }
+                        
+                        const eventData = {
+                            activity_id: this.editingEvent.activity_id,
+                            event_date: this.editingEvent.event_date,
+                            time_slot: this.editingEvent.time_slot,
+                            goal: this.editingEvent.goal || null,
+                            notes: this.editingEvent.notes || null,
+                            status: this.editingEvent.status
+                        };
+                        
+                        if (this.editingEvent.id) {
+                            // 更新现有事件
+                            await this.apiCall(`/events/${this.editingEvent.id}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(eventData)
+                            });
+                        } else {
+                            // 创建新事件
+                            await this.apiCall('/events/', {
+                                method: 'POST',
+                                body: JSON.stringify(eventData)
+                            });
+                        }
+                        
+                        // 刷新数据
+                        await this.loadWeekSchedule();
+                        this.forceCloseModal();
+                        
+                    } catch (error) {
+                        console.error('保存日程失败:', error);
+                    }
+                },
+                
+                async deleteScheduledEvent() {
+                    if (!this.editingEvent.id) return;
+                    
+                    if (confirm('确定要删除这个日程吗？')) {
+                        try {
+                            await this.apiCall(`/events/${this.editingEvent.id}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            await this.loadWeekSchedule();
+                            this.forceCloseModal();
+                        } catch (error) {
+                            console.error('删除日程失败:', error);
+                        }
+                    }
+                },
+                
+                // 拖拽功能初始化
+                initDragAndDrop() {
+                    console.log('Initializing drag and drop...', 'Current view:', this.currentView);
+                    
+                    // 只在周视图中初始化拖拽功能
+                    if (this.currentView !== 'week') {
+                        console.log('Drag and drop skipped - not in week view');
+                        return;
+                    }
+                    
+                    const self = this; // 保存Alpine.js实例引用
+                    
+                    // 只清理时间槽的Sortable实例，保留活动池的实例
+                    document.querySelectorAll('.time-slot.sortable-initialized').forEach(el => {
+                        if (el.sortableInstance) {
+                            el.sortableInstance.destroy();
+                        }
+                        el.classList.remove('sortable-initialized');
+                    });
+                    
+                    console.log('Cleaned up time slot sortable instances');
+                    
+                    // 初始化活动池的拖拽
+                    const activityPool = document.getElementById('activity-pool');
+                    if (activityPool && !activityPool.classList.contains('sortable-initialized')) {
+                        activityPool.sortableInstance = Sortable.create(activityPool, {
+                            group: {
+                                name: 'activities',
+                                pull: 'clone', // 从活动池拖拽时创建副本
+                                put: false     // 不允许其他元素拖入活动池
+                            },
+                            sort: false, // 活动池内不允许排序
+                            animation: 200,
+                            ghostClass: 'sortable-ghost',
+                            chosenClass: 'sortable-chosen',
+                            dragClass: 'sortable-drag',
+                            // 确保克隆时保留原始数据
+                            onClone: function(evt) {
+                                console.log('Activity cloned from pool:', evt.clone);
+                                // 确保克隆的元素保留data属性
+                                const originalId = evt.item.getAttribute('data-activity-id');
+                                if (originalId) {
+                                    evt.clone.setAttribute('data-activity-id', originalId);
+                                }
+                            }
+                        });
+                        activityPool.classList.add('sortable-initialized');
+                        console.log('Activity pool sortable initialized');
+                    }
+                    
+                    // 初始化时间槽的拖拽接收
+                    const timeSlots = document.querySelectorAll('.time-slot');
+                    console.log('Found time slots:', timeSlots.length);
+                    
+                    timeSlots.forEach((slot, index) => {
+                        if (!slot.classList.contains('sortable-initialized')) {
+                            console.log(`Initializing time slot ${index}:`, {
+                                date: slot.getAttribute('data-date'),
+                                timeSlot: slot.getAttribute('data-time-slot')
+                            });
+                            
+                            slot.sortableInstance = Sortable.create(slot, {
+                                group: {
+                                    name: 'activities',
+                                    pull: true,  // 允许从时间槽拖出（用于删除或移动）
+                                    put: true    // 允许拖入时间槽
+                                },
+                                animation: 200,
+                                ghostClass: 'sortable-ghost',
+                                chosenClass: 'sortable-chosen',
+                                dragClass: 'sortable-drag',
+                                // 当从活动池拖拽到时间槽
+                                onAdd: function(evt) {
+                                    console.log('Drop event triggered on slot:', evt.to);
+                                    const activityId = evt.item.getAttribute('data-activity-id');
+                                    const date = evt.to.getAttribute('data-date');
+                                    const timeSlot = parseInt(evt.to.getAttribute('data-time-slot'));
+                                    
+                                    console.log('Drop details:', { activityId, date, timeSlot, fromPool: evt.from.id === 'activity-pool' });
+                                    
+                                    if (!activityId || !date || !timeSlot) {
+                                        console.error('Missing required drop data');
+                                        evt.item.remove();
+                                        return;
+                                    }
+                                    
+                                    // 立即移除拖拽的临时元素
+                                    evt.item.remove();
+                                    
+                                    // 处理拖拽事件
+                                    self.handleDrop(activityId, date, timeSlot);
+                                },
+                                // 当从时间槽拖拽元素出去时（删除功能）
+                                onRemove: function(evt) {
+                                    console.log('Item removed from time slot');
+                                    // 如果拖拽到活动池或空白区域，视为删除操作
+                                    if (evt.to.id === 'activity-pool' || !evt.to.classList.contains('time-slot')) {
+                                        const date = evt.from.getAttribute('data-date');
+                                        const timeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
+                                        console.log('Deleting event at:', date, timeSlot);
+                                        // 这里可以添加删除事件的逻辑
+                                    }
+                                }
+                            });
+                            slot.classList.add('sortable-initialized');
+                        }
+                    });
+                    
+                    console.log('Drag and drop initialization completed');
+                },
+                
+                // 只初始化时间槽的拖拽功能（用于动态重新初始化）
+                initTimeSlotsDragAndDrop() {
+                    if (this.currentView !== 'week') {
+                        return;
+                    }
+                    
+                    const self = this;
+                    
+                    // 清理时间槽的Sortable实例
+                    document.querySelectorAll('.time-slot.sortable-initialized').forEach(el => {
+                        if (el.sortableInstance) {
+                            el.sortableInstance.destroy();
+                        }
+                        el.classList.remove('sortable-initialized');
+                    });
+                    
+                    // 重新初始化时间槽的拖拽接收
+                    const timeSlots = document.querySelectorAll('.time-slot');
+                    console.log('Re-initializing time slots:', timeSlots.length);
+                    
+                    timeSlots.forEach((slot, index) => {
+                        if (!slot.classList.contains('sortable-initialized')) {
+                            slot.sortableInstance = Sortable.create(slot, {
+                                group: {
+                                    name: 'activities',
+                                    pull: true,
+                                    put: true
+                                },
+                                animation: 200,
+                                ghostClass: 'sortable-ghost',
+                                chosenClass: 'sortable-chosen',
+                                dragClass: 'sortable-drag',
+                                onAdd: function(evt) {
+                                    console.log('Drop event triggered on slot:', evt.to);
+                                    const activityId = evt.item.getAttribute('data-activity-id');
+                                    const date = evt.to.getAttribute('data-date');
+                                    const timeSlot = parseInt(evt.to.getAttribute('data-time-slot'));
+                                    
+                                    console.log('Drop details:', { activityId, date, timeSlot, fromPool: evt.from.id === 'activity-pool' });
+                                    
+                                    if (!activityId || !date || !timeSlot) {
+                                        console.error('Missing required drop data');
+                                        evt.item.remove();
+                                        return;
+                                    }
+                                    
+                                    evt.item.remove();
+                                    self.handleDrop(activityId, date, timeSlot);
+                                },
+                                onRemove: function(evt) {
+                                    console.log('Item removed from time slot');
+                                    if (evt.to.id === 'activity-pool' || !evt.to.classList.contains('time-slot')) {
+                                        const date = evt.from.getAttribute('data-date');
+                                        const timeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
+                                        console.log('Deleting event at:', date, timeSlot);
+                                    }
+                                }
+                            });
+                            slot.classList.add('sortable-initialized');
+                        }
+                    });
+                    
+                    console.log('Time slots drag and drop re-initialization completed');
+                },
+                
+                async handleDrop(activityId, date, timeSlot) {
+                    try {
+                        console.log('=== DROP HANDLER START ===');
+                        console.log('Handling drop:', { activityId, date, timeSlot });
+                        console.log('Type check:', typeof activityId, typeof date, typeof timeSlot);
+                        
+                        // 验证输入参数
+                        if (!activityId || !date || !timeSlot) {
+                            console.error('Invalid drop parameters:', { activityId, date, timeSlot });
+                            alert('拖拽参数错误，请重试');
+                            return;
+                        }
+                        
+                        // 检查是否已有事件
+                        const existing = this.getScheduledEvent(date, timeSlot);
+                        console.log('Existing event check:', existing);
+                        if (existing) {
+                            alert('该时间槽已有安排，请选择其他时间或先删除现有安排');
+                            return;
+                        }
+                        
+                        // 找到活动信息
+                        console.log('Searching for activity with ID:', activityId, 'in:', this.flatActivities.length, 'activities');
+                        const activity = this.flatActivities.find(a => a.id == activityId);
+                        console.log('Activity search result:', activity);
+                        if (!activity) {
+                            console.error('Activity not found:', activityId);
+                            console.error('Available activities:', this.flatActivities.map(a => ({ id: a.id, name: a.name })));
+                            alert('未找到活动信息，ID: ' + activityId);
+                            return;
+                        }
+                        
+                        console.log('Found activity:', activity);
+                        
+                        // 创建新的日程事件
+                        const eventData = {
+                            activity_id: parseInt(activityId),
+                            event_date: date,
+                            time_slot: parseInt(timeSlot),
+                            goal: '',
+                            notes: '',
+                            status: 'planned'
+                        };
+                        
+                        console.log('Creating event:', eventData);
+                        
+                        const result = await this.apiCall('/events/', {
+                            method: 'POST',
+                            body: JSON.stringify(eventData)
+                        });
+                        
+                        console.log('Event created:', result);
+                        
+                        // 刷新数据
+                        console.log('Reloading week schedule after successful drop...');
+                        await this.loadWeekSchedule();
+                        
+                        // 重新渲染网格
+                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                        if (gridContainer) {
+                            gridContainer.innerHTML = this.renderFullWeekGrid();
+                            console.log('Week grid re-rendered after drop');
+                            
+                            // 只重新初始化时间槽的拖拽功能，不影响活动池
+                            setTimeout(() => {
+                                this.initTimeSlotsDragAndDrop();
+                            }, 100);
+                        }
+                        
+                        // 拖拽成功，不自动打开编辑框
+                        // 用户可以手动点击时间槽中的事件来编辑
+                        
+                        console.log('=== DROP HANDLER SUCCESS ===');
+                        
+                    } catch (error) {
+                        console.error('=== DROP HANDLER ERROR ===');
+                        console.error('处理拖拽失败:', error);
+                        console.error('Error details:', {
+                            name: error.name,
+                            message: error.message,
+                            stack: error.stack
+                        });
+                        alert('创建日程失败: ' + error.message);
+                    }
+                },
+                
+                // 汇总视图渲染
+                renderActivityTree() {
+                    if (!this.activities.length) return '<p class="text-muted">暂无活动</p>';
+                    
+                    const renderNode = (activity, level = 0) => {
+                        let html = `
+                            <div class="mb-2" style="margin-left: ${level * 20}px;">
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                                    <div>
+                                        <strong>${activity.name}</strong>
+                                        ${activity.description ? `<br><small class="text-muted">${activity.description}</small>` : ''}
+                                    </div>
+                                    <div class="text-end">
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                onclick="deleteActivity(${activity.id})">
+                                            删除
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        if (activity.children && activity.children.length > 0) {
+                            activity.children.forEach(child => {
+                                html += renderNode(child, level + 1);
+                            });
+                        }
+                        
+                        return html;
+                    };
+                    
+                    return this.activities.map(activity => renderNode(activity)).join('');
+                },
+                
+                // 带统计信息的汇总视图渲染
+                renderActivityTreeWithStats() {
+                    if (!this.activities.length) return '<p class="text-muted">暂无活动</p>';
+                    
+                    const renderNode = (activity, level = 0) => {
+                        const stats = this.activityStats[activity.id] || {};
+                        const totalEvents = stats.total_events || 0;
+                        const completedEvents = stats.completed_events || 0;
+                        const completionRate = stats.completion_rate || 0;
+                        
+                        let html = `
+                            <div class="mb-3" style="margin-left: ${level * 20}px;">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">${activity.name}</h6>
+                                                ${activity.description ? `<p class="text-muted small mb-2">${activity.description}</p>` : ''}
+                                                
+                                                <!-- 统计信息 -->
+                                                <div class="row text-center mb-2">
+                                                    <div class="col-4">
+                                                        <small class="text-muted d-block">总安排</small>
+                                                        <strong class="text-primary">${totalEvents}</strong>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <small class="text-muted d-block">已完成</small>
+                                                        <strong class="text-success">${completedEvents}</strong>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <small class="text-muted d-block">完成率</small>
+                                                        <strong class="text-warning">${Math.round(completionRate * 100)}%</strong>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Goal 列表 -->
+                                                ${this.renderActivityGoals(stats)}
+                                            </div>
+                                            <div class="text-end">
+                                                <button class="btn btn-outline-primary btn-sm me-2" 
+                                                        onclick="window.laeAppInstance.editActivity(${activity.id})">
+                                                    编辑
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        onclick="deleteActivity(${activity.id})">
+                                                    删除
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        if (activity.children && activity.children.length > 0) {
+                            activity.children.forEach(child => {
+                                html += renderNode(child, level + 1);
+                            });
+                        }
+                        
+                        return html;
+                    };
+                    
+                    return this.activities.map(activity => renderNode(activity)).join('');
+                },
+                
+                // 渲染活动的Goal列表
+                renderActivityGoals(stats) {
+                    if (!stats.sub_activities || !stats.sub_activities.length) {
+                        return '<small class="text-muted">暂无目标记录</small>';
+                    }
+                    
+                    let html = '<div class="mt-2"><small class="text-muted d-block mb-1">最近目标:</small>';
+                    
+                    // 显示最近的几个goals
+                    let goalCount = 0;
+                    for (const subActivity of stats.sub_activities) {
+                        if (subActivity.goals && subActivity.goals.length > 0) {
+                            for (const goal of subActivity.goals.slice(-3)) { // 只显示最近3个
+                                if (goalCount >= 5) break; // 最多显示5个
+                                
+                                const statusColor = goal.status === 'completed' ? 'success' : 'secondary';
+                                const statusIcon = goal.status === 'completed' ? '✓' : '○';
+                                
+                                html += `
+                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                        <small><span class="text-${statusColor}">${statusIcon}</span> ${goal.goal}</small>
+                                        <small class="text-muted">${goal.date}</small>
+                                    </div>
+                                `;
+                                goalCount++;
+                            }
+                        }
+                        if (goalCount >= 5) break;
+                    }
+                    
+                    html += '</div>';
+                    return goalCount > 0 ? html : '<small class="text-muted">暂无目标记录</small>';
+                },
+                
+                // 完整周视图网格渲染（包含标题行和所有时间槽）
+                renderFullWeekGrid() {
+                    if (!this.timeSlots.length || !this.weekDates.length) {
+                        return '<p class="text-muted">加载中...</p>';
+                    }
+                    
+                    let html = '';
+                    
+                    console.log('Rendering full week grid:', {
+                        timeSlots: this.timeSlots.length,
+                        weekDates: this.weekDates.length,
+                        totalElements: (this.timeSlots.length + 1) * 8 // (5+1)行 × 8列
+                    });
+                    
+                    // 1. 生成标题行（8个元素：1个"时间"标题 + 7个日期标题）
+                    html += '<div class="week-header">时间</div>';
+                    for (const day of this.weekDates) {
+                        const date = new Date(day);
+                        const weekday = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][date.getDay() === 0 ? 6 : date.getDay() - 1];
+                        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+                        html += `
+                            <div class="week-header">
+                                <div>${weekday}</div>
+                                <div>${dateStr}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 2. 为每个时间段生成一行（8个元素：1个时间标签 + 7个时间槽）
+                    for (const slot of this.timeSlots) {
+                        // 时间标签（第一列）
+                        html += `<div class="time-label">${slot.name}</div>`;
+                        
+                        // 该时间段的7个时间槽（周一到周日）
+                        for (const day of this.weekDates) {
+                            const event = this.getScheduledEvent(day, slot.value);
+                            const occupiedClass = event ? 'occupied' : '';
+                            
+                            html += `
+                                <div class="time-slot p-2 ${occupiedClass}" 
+                                     data-date="${day}" 
+                                     data-time-slot="${slot.value}"
+                                     onclick="window.laeAppInstance.editScheduledEvent('${day}', ${slot.value})">
+                            `;
+                            
+                            if (event) {
+                                html += `
+                                    <div class="scheduled-event">
+                                        <div class="fw-bold" style="font-size: 0.75rem;">${event.activity_name || ''}</div>
+                                        <div style="font-size: 0.7rem; color: #666;">${event.goal || ''}</div>
+                                        ${event.notes ? `<div style="font-size: 0.65rem; color: #888;">备注: ${event.notes}</div>` : ''}
+                                    </div>
+                                `;
+                            }
+                            
+                            html += '</div>';
+                        }
+                    }
+                    
+                    console.log('Generated full grid HTML, total elements:', (html.match(/<div/g) || []).length);
+                    return html;
+                },
+                
+                // 保留原函数以备用
+                renderWeekGrid() {
+                    return this.renderFullWeekGrid();
+                },
+                
+                // 工具方法
+                getCurrentDateString() {
+                    return this.currentDate.toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'long'
+                    });
+                },
+                
+                getWeekTitle() {
+                    if (this.weekDates.length === 0) return '';
+                    const start = new Date(this.weekDates[0]);
+                    const end = new Date(this.weekDates[6]);
+                    return `${start.getMonth() + 1}月${start.getDate()}日 - ${end.getMonth() + 1}月${end.getDate()}日`;
+                },
+                
+                getMonthTitle() {
+                    return `${this.currentYear}年${this.currentMonth}月`;
+                },
+                
+                // 月视图相关方法
+                previousMonth() {
+                    this.currentMonth--;
+                    if (this.currentMonth < 1) {
+                        this.currentMonth = 12;
+                        this.currentYear--;
+                    }
+                    this.loadMonthSchedule();
+                },
+                
+                nextMonth() {
+                    this.currentMonth++;
+                    if (this.currentMonth > 12) {
+                        this.currentMonth = 1;
+                        this.currentYear++;
+                    }
+                    this.loadMonthSchedule();
+                },
+                
+                async loadMonthSchedule() {
+                    try {
+                        console.log(`Loading month schedule for ${this.currentYear}-${this.currentMonth}`);
+                        
+                        // 渲染月历（现在直接在renderMonthCalendar中加载数据）
+                        await this.renderMonthCalendar();
+                        
+                        console.log('Month schedule loaded and rendered');
+                    } catch (error) {
+                        console.error('加载月日程失败:', error);
+                        const monthCalendarContainer = document.getElementById('month-calendar');
+                        if (monthCalendarContainer) {
+                            monthCalendarContainer.innerHTML = '<p class="text-danger">加载月视图失败</p>';
+                        }
+                    }
+                },
+                
+                // 汇总视图相关方法
+                async initSummaryData() {
+                    console.log('Initializing summary data...');
+                    await this.generateAvailableMonths();
+                    await this.loadSummaryStatistics();
+                    await this.loadActivityStatistics();
+                },
+                
+                generateAvailableMonths() {
+                    // 生成可选择的月份列表（简化版本，基于当前日期）
+                    const now = new Date();
+                    const months = [];
+                    
+                    // 添加当前月和前面几个月
+                    for (let i = 2; i >= 0; i--) {
+                        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                        months.push({
+                            value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+                            label: `${date.getFullYear()}年${date.getMonth() + 1}月`
+                        });
+                    }
+                    
+                    this.availableMonths = months;
+                    console.log('Available months:', this.availableMonths);
+                },
+                
+                async loadSummaryStatistics() {
+                    try {
+                        console.log('Loading summary statistics for month:', this.summaryMonth);
+                        let endpoint = '/statistics/summary';
+                        
+                        // 如果选择了特定月份，添加查询参数（假设后端支持）
+                        if (this.summaryMonth) {
+                            endpoint += `?month=${this.summaryMonth}`;
+                        }
+                        
+                        this.summaryStats = await this.apiCall(endpoint);
+                        console.log('Summary statistics loaded:', this.summaryStats);
+                    } catch (error) {
+                        console.error('Failed to load summary statistics:', error);
+                        this.summaryStats = {
+                            total_activities: 0,
+                            total_events: 0,
+                            completed_events: 0,
+                            completion_rate: 0
+                        };
+                    }
+                },
+                
+                async loadActivityStatistics() {
+                    try {
+                        console.log('Loading activity statistics...');
+                        this.activityStats = {};
+                        
+                        // 为每个活动加载统计数据
+                        for (const activity of this.flatActivities) {
+                            const stats = await this.apiCall(`/statistics/activities/${activity.id}/statistics`);
+                            this.activityStats[activity.id] = stats;
+                            console.log(`Stats for ${activity.name}:`, stats);
+                        }
+                    } catch (error) {
+                        console.error('Failed to load activity statistics:', error);
+                        this.activityStats = {};
+                    }
+                },
+                
+                formatWeekday(dateString) {
+                    const date = new Date(dateString);
+                    return ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][date.getDay() === 0 ? 6 : date.getDay() - 1];
+                },
+                
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                },
+                
+                // 月历渲染（简化版本，显示事件数量）
+                async renderMonthCalendar() {
+                    try {
+                        // 重新加载月数据以获取完整的天数信息
+                        const data = await this.apiCall(`/calendar/month/${this.currentYear}/${this.currentMonth}`);
+                        
+                        if (!data.days || data.days.length === 0) {
+                            const monthCalendarContainer = document.getElementById('month-calendar');
+                            if (monthCalendarContainer) {
+                                monthCalendarContainer.innerHTML = '<p class="text-muted">无法加载月视图数据</p>';
+                            }
+                            return;
+                        }
+                        
+                        const firstDay = new Date(this.currentYear, this.currentMonth - 1, 1);
+                        const lastDay = new Date(this.currentYear, this.currentMonth, 0);
+                        
+                        // 计算月历应该从哪一天开始（周一）
+                        const startDate = new Date(firstDay);
+                        const dayOfWeek = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+                        startDate.setDate(firstDay.getDate() - dayOfWeek + 1);
+                        
+                        // 计算月历应该到哪一天结束（确保完整的周）
+                        const endDate = new Date(lastDay);
+                        const endDayOfWeek = lastDay.getDay() === 0 ? 7 : lastDay.getDay();
+                        endDate.setDate(lastDay.getDate() + (7 - endDayOfWeek));
+                        
+                        // 创建日期到事件数量的映射
+                        const dayEventsMap = {};
+                        data.days.forEach(day => {
+                            dayEventsMap[day.date] = {
+                                event_count: day.event_count,
+                                is_today: day.is_today
+                            };
+                        });
+                        
+                        let html = '';
+                        let currentDate = new Date(startDate);
+                        
+                        // 按周渲染
+                        while (currentDate <= endDate) {
+                            html += '<div class="row mb-1">';
+                            
+                            // 一周7天
+                            for (let i = 0; i < 7; i++) {
+                                const dateStr = currentDate.toISOString().split('T')[0];
+                                const dayData = dayEventsMap[dateStr] || { event_count: 0, is_today: false };
+                                const isCurrentMonth = currentDate.getMonth() === this.currentMonth - 1;
+                                
+                                let cellClass = 'col border p-2';
+                                if (!isCurrentMonth) {
+                                    cellClass += ' text-muted bg-light';
+                                }
+                                if (dayData.is_today) {
+                                    cellClass += ' bg-warning bg-opacity-25 fw-bold';
+                                }
+                                
+                                html += `<div class="${cellClass}" style="min-height: 100px;">`;
+                                html += `<div class="fw-bold">${currentDate.getDate()}</div>`;
+                                
+                                // 显示事件数量
+                                if (dayData.event_count > 0) {
+                                    html += `
+                                        <div class="mt-2">
+                                            <span class="badge bg-primary">${dayData.event_count} 个日程</span>
+                                        </div>
+                                    `;
+                                }
+                                
+                                html += '</div>';
+                                
+                                // 移动到下一天
+                                currentDate.setDate(currentDate.getDate() + 1);
+                            }
+                            
+                            html += '</div>';
+                        }
+                        
+                        // 更新DOM
+                        const monthCalendarContainer = document.getElementById('month-calendar');
+                        if (monthCalendarContainer) {
+                            monthCalendarContainer.innerHTML = html;
+                        }
+                    } catch (error) {
+                        console.error('渲染月历失败:', error);
+                        const monthCalendarContainer = document.getElementById('month-calendar');
+                        if (monthCalendarContainer) {
+                            monthCalendarContainer.innerHTML = '<p class="text-danger">加载月视图失败</p>';
+                        }
+                    }
+                },
+                
+                // 获取时间槽名称的辅助方法
+                getTimeSlotName(timeSlotValue) {
+                    const slot = this.timeSlots.find(s => s.value === timeSlotValue);
+                    return slot ? slot.name.replace('第1时段', '1').replace('第2时段', '2').replace('时段', '') : `时段${timeSlotValue}`;
+                }
+            }
+        }
+
+        // 全局辅助函数
+        async function deleteActivity(activityId) {
+            if (confirm('确定要删除这个活动吗？这将删除所有相关的日程安排。')) {
+                try {
+                    await fetch(`/api/activities/${activityId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    // 刷新页面
+                    location.reload();
+                } catch (error) {
+                    console.error('删除活动失败:', error);
+                    alert('删除失败');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
