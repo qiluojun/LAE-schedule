@@ -2058,7 +2058,7 @@
                         // 重新加载月数据以获取完整的天数信息
                         const data = await this.apiCall(`/calendar/month/${this.currentYear}/${this.currentMonth}`);
                         
-                        if (!data.days || data.days.length === 0) {
+                        if (!data.schedule || data.schedule.length === 0) {
                             const monthCalendarContainer = document.getElementById('month-calendar');
                             if (monthCalendarContainer) {
                                 monthCalendarContainer.innerHTML = '<p class="text-muted">无法加载月视图数据</p>';
@@ -2081,7 +2081,7 @@
                         
                         // 创建日期到事件数量的映射
                         const dayEventsMap = {};
-                        data.days.forEach(day => {
+                        data.schedule.forEach(day => {
                             dayEventsMap[day.date] = {
                                 event_count: day.event_count,
                                 is_today: day.is_today

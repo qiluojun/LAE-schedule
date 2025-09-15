@@ -164,6 +164,16 @@ http://127.0.0.1:8000/docs
 
 ---
 
+## ✅ V2.0 Bug Fixes (2025-09-15)
+
+### Fixed Issues
+#### Month View Display Bug (RESOLVED)
+- **Issue**: Month view failed to display due to frontend-backend data structure mismatch
+- **Root Cause**: Frontend expected `data.days` array but backend returned `data.schedule` array
+- **Solution**: Updated frontend code to use correct `data.schedule` reference
+- **Files Modified**: `app/templates/index.html:2061, 2084`
+- **Status**: ✅ **FULLY RESOLVED** - Month view now displays correctly with event count badges
+
 ## 🔄 Known Non-Critical Issues
 
 ### Activity Pool Refresh Issue (Minor)
