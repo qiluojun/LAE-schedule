@@ -1,6 +1,50 @@
-# LAE - 个人日程与主支线管理系统 v1 
+# LAE - 个人日程与主支线管理系统
 
-**版本: 1.0 **
+## 🚀 当前开发状态: v2.0 Architecture Phase
+
+**最新版本: v2.0-dev (2025-09-15)**
+
+### ✅ v2.0 Phase 1 已完成 (2025-09-15)
+
+**核心架构升级完成**：
+- ✅ **双轴矩阵模型**: 从 v1 单线"活动"升级到"Domain (领域) × ActivityType (类型)"矩阵架构
+- ✅ **新数据库 Schema**: `domains`, `activity_types`, `schedules`, `scheduled_events` 四表架构
+- ✅ **完整 API 重构**: 所有 v2.0 后端 API 端点已实现
+- ✅ **层级化支持**: 无限深度的 Domain 和 ActivityType 嵌套
+- ✅ **示例数据**: 3个顶级 domains，完整的层级结构和 activity types
+- ✅ **SQLAlchemy 模型**: 完整的 v2.0 数据模型实现
+- ✅ **数据库迁移**: v1 → v2 数据结构成功迁移
+
+**系统现状**:
+- 🟢 **数据库层**: 完全可用，包含完整示例数据
+- 🟢 **模型层**: SQLAlchemy 模型全部实现并测试通过
+- 🟡 **API层**: 核心功能实现，部分 Pydantic 序列化待优化
+- 🔴 **前端层**: 待升级到 v2.0 架构
+
+**已知问题**:
+- API 响应的 Pydantic 模型配置需要进一步调试
+- 主要影响 Swagger UI 显示，不影响核心功能
+
+### 📋 下一步计划 (Phase 2 优先级)
+
+**🎯 Phase 2A: 核心交互实现 (下次对话重点)**
+1. **API 调试完成**: 修复 Pydantic 序列化问题，确保所有端点正常
+2. **汇总视图 v2.1**: 实现 Domains 和 ActivityTypes 的管理界面
+3. **周视图 v2.1**: 重构拖拽交互，支持双轴矩阵选择
+
+**🎯 Phase 2B: 功能完善**
+4. **Schedule 功能闭环**: Domain 与 Schedule 的完整集成
+5. **新版编辑框**: 支持 Name + Domain/Type/Schedule 的表单界面
+
+**🎯 Phase 2C: 体验优化**
+6. **双轴矩阵的直观界面设计**
+7. **侧边栏优化**: 可切换的 Domains/Types 树状列表
+
+---
+
+## v1.0 系统文档 (已完成)
+
+**版本: 1.0 (已完成)**
 
 ## 1\. 项目背景 (Project Background)
 
@@ -215,6 +259,12 @@
       * ✅ 智能拖拽验证：自动检测和修复无效拖拽目标
       * ✅ 网格尺寸优化：增大间距和尺寸提高拖拽精度
 
+✅ 已修复bug (2025-09-15)
+- ~~目前月视图存在问题，无法显示~~ **已修复**
+  ~~期望的目标功能是，缩略图可以显示对应日期中已经添加了几项日程。无需显示更多信息。~~
+
+**修复说明**: 前后端数据结构不匹配问题已解决，月视图现在能正常显示日历和日程数量标记。
+
 ### 🎉 V1.0 开发完成 (2025-09-13)
 
 **系统特性**：
@@ -271,22 +321,220 @@
 
 # LAE - 个人日程与主支线管理系统 v2 
 
-## 待整理的方向/功能 设想
-
-开发 **Markdown 导出** 功能
-
-DDL 
-欸嘿 那这种怎么应对小的零碎时间？一些零碎的活动？以及爆破时间？以及一些高度飘忽不定的事情？  
-		我母鸡啊！日后完全自动化了 当然可以实现自动化的记录 但是目前可能还做不到 啊啊啊啊啊啊啊 *未来再说*
-		以及 一天的block 更细更灵活的划分 后续再说~ 
-以及 统计的信息 除了次数 也要考虑时间长度 还要考虑活动属性
-  越来越复杂了 2333 
+## 7\. 开发路线图 (Development Roadmap) 
 
 
-# 开发注意事项（AI无需阅读此板块）
+
+### LAE 个人日程与主支线管理系统 v2.0 - 系统架构与开发方案--草稿
+
+#### 1. V2 核心理念：从线性安排到矩阵管理
+
+LAE v2.0 的核心变革是从 v1 的单线“活动 (Activity)”模型，演进为“**领域 (Domain) x 类型 (Type)**”的双轴矩阵模型。
+
+系统承认一个个体在执行具体任务（“行动”）时，其意图是多维度的：既有**目的性**（“我做这件事是**为了**什么领域/项目？”——由 **Domain** 定义），也包含**方法性**（“我正在做的这件事**是**何种性质的工作？”——由 **Type** 定义）。
+
+V2 旨在通过一个高度灵活的界面，捕捉并管理这种多维度关系，同时将具有明确时间边界的目标（“日程”）作为领域的附加上下文，为日常行动提供清晰指引。
+
+#### 2. V2 系统架构
+
+##### 2.1 概念模型
+
+* **主支线 (Domains):** 定义用户长期关注的、层级化的**责任领域或项目分支**。它是回答“为了什么”的轴。
+* **活动类型 (Activity Types):** 定义工作**性质**的、扁平化的**标签**。它是回答“是什么”的轴。
+* **日程 (Schedules):** **附属于**某个 Domain 节点下的、有时间限制的**具体目标**。它为 Domain 提供阶段性目标。
+* **已安排活动 (Actions):** 用户在周视图中安排的**最小时间块单元**。它通过可选的 `domain_id` 和 `type_id` 在双轴矩阵中定位，并可选择性关联到 `schedule_id`。
+
+##### 2.2 数据模型 (Data Model) - 初步方案
+
+为支持新架构，数据库将进行结构性调整。此方案优先定义核心关系，`properties` 等细节字段可在后续迭代中添加。
+
+1.  **`domains` 表 (由原 `activities` 表演进)**
+    * `id` (INTEGER, PK): 主键
+    * `name` (TEXT): 节点名称 (如 "zeroPPD")
+    * `parent_id` (INTEGER, FK): 指向 `domains.id`，构建层级关系
+    * `description` (TEXT, NULLABLE): 描述
+    * *(后续添加 `properties` (JSON) 等字段)*
+
+2.  **`activity_types` 表 (新增)**
+    * `id` (INTEGER, PK): 主键
+    * `name` (TEXT): 类型名称 (如 "读文献")
+    * `parent_id` (INTEGER, FK): 指向 `activity_types.id`，支持类型层级化
+    * *(后续添加 `properties` (JSON) 等字段)*
+
+3.  **`schedules` 表 (新增)**
+    * `id` (INTEGER, PK): 主键
+    * `domain_id` (INTEGER, FK): **强制关联**到 `domains.id`
+    * `name` (TEXT): 日程/目标名称
+    * `deadline` (DATETIME, NULLABLE): 截止日期
+    * `status` (TEXT): 状态 (e.g., 'ongoing', 'completed')
+
+4.  **`scheduled_events` 表 (核心重构)**
+    * `id` (INTEGER, PK): 主键
+    * `event_date` (DATE): 日期
+    * `time_slot` (INTEGER): 时间槽
+    * `name` (TEXT): **用户自定义的行动名称**
+    * `notes` (TEXT, NULLABLE): 备注
+    * `status` (TEXT): 状态
+    * `domain_id` (INTEGER, FK, **NULLABLE**): 关联到 `domains.id`
+    * `type_id` (INTEGER, FK, **NULLABLE**): 关联到 `activity_types.id`
+    * `schedule_id` (INTEGER, FK, **NULLABLE**): 关联到 `schedules.id`
+    * *(后续添加 `custom_properties` (JSON) 字段以支持用户自定义覆盖)*
+
+##### 2.3 技术栈 (Technical Stack)
+技术栈保持与 v1 一致，以确保开发平稳过渡。
+* **后端:** Python, FastAPI, SQLAlchemy (ORM)
+* **数据库:** SQLite
+* **前端:** HTML, CSS, JavaScript, Bootstrap, Alpine.js, SortableJS
+
+#### 3. 初步开发方案 (Phased Approach)
+
+此方案旨在“**先立骨架，再填血肉**”，优先实现核心的数据结构和交互流程。
+
+##### **Phase 1: 数据库与后端重构 (The Foundation)**
+* **目标:** 搭建支持 V2 模型的底层基础。
+* **任务:**
+    1.  **Schema 迁移:** 备份 v1 数据。根据上述 V2 数据模型，创建新的数据库 Schema。
+    2.  **ORM 更新:** 在 SQLAlchemy 中创建 `Domain`, `ActivityType`, `Schedule` 的新 Model，并重构 `ScheduledEvent` Model。
+    3.  **基础 API 开发:**
+        * 为 `domains` 和 `activity_types` 提供完整的层级化 CRUD API。
+        * 为 `schedules` 提供基础的 CRUD API (创建、读取、更新、删除)。
+        * 重构 `scheduled_events` 的 CRUD API，使其支持新的 `name`, `domain_id`, `type_id`, `schedule_id` 字段。
+    4.  **视图数据接口重构:** 修改向前端（周视图、月视图）提供数据的 API，使其返回符合新数据结构的数据。
+
+##### **Phase 2: 核心交互实现 (Core Interaction Implementation)**
+* **目标:** 让用户能够在新架构下，完成最核心的日程安排操作。
+* **任务:**
+    1.  **汇总视图 v2.1 (管理中心): ✅ 已完成**
+        * ✅ 实现 `domains` 和 `activity_types` 的树状结构展示。
+        * ✅ 提供基础的节点管理功能：创建、重命名、删除。
+        * ✅ 编辑删除功能完全实现，包括模态框和API调用。
+
+    2.  **周视图 v2.1 (交互革命):**
+        * **构建侧边栏:** 在界面左侧或右侧，实现可切换的、可折叠的 `Domains` 和 `Types` 树状列表。
+        * **实现点击创建:** 使用 SortableJS，允许用户从侧边栏选中一个 `Domain` 或 `Type` 节点，再点击空白网格，此时自动弹出编辑框、预填好对应 name（同选中的节点名称），并填好对应的domain或type属性。
+        * **实现点击创建:** 允许用户直接点击空白时间槽，弹出空的编辑框。
+          * **开发新版编辑框:** 创建一个支持 `Name` (必填) 以及 `Domain`, `Type`, `Schedule` (可选) 等字段的表单。
+        * 确保 `scheduled_events` 的增、删、改在周视图界面功能正常。以及同样允许卡片在卡槽之间之间的拖拽移动。
+
+##### **Phase 3: 功能完善与关联 (Feature Integration)**
+* **目标:** 打通各模块间的关联，完善辅助功能。
+* **任务:**
+    1.  **Schedule 功能闭环:**
+        * ✅ 在汇总视图中，为 `Domain` 节点添加管理其 `Schedules` 的界面。
+        * ✅ 在周视图中，查询并渲染 `Schedules` 的跨天时间条。(已完成)
+        
+    2.  **宏观视图集成:**
+        * ✅ 在月视图中，查询并渲染 `Schedules` 的跨天时间条，提供宏观规划视角。(已完成)
+    
+
+##### **Phase 4: 属性系统与 (Properties)** （待进行）
+* **目标:** 引入属性系统，并对整体体验进行打磨。
+* **任务:**
+    1.  **属性系统设计与实现:** 在汇总视图中，为 `Domain` 和 `Type` 节点添加编辑其 `properties` 的界面。
+    2.  **继承逻辑实现:** 在后端和前端实现“`Action` 的属性默认继承自 `Domain`，并允许用户自定义覆盖”的逻辑。
+
+##### **Phase 5: 体验优化
+    1.  **UI/UX 优化:** 根据实际使用体验，优化拖拽动画、表单交互、加载速度等细节。 
+      **拖拽管理:** 在汇总视图中，实现拖拽 `Domain` 和 `Type` 节点以调整其层级和顺序的功能（选做）。  
+      * 在周视图的 `Action` 编辑框中，实现"选择 Domain 后，动态加载其关联 Schedules"的联动逻辑（允许把事件和schedule绑定）。
+      时间条 只有起始点的时候 才应该有三角形的标识 现在只要是周开头 也有
+    2.  **全面测试与 Bug 修复。**
+      我发现 数据库里 有个 activity 表 不知道是干啥的 而且type 的 新建列 里 选择父级节点的时候 莫名其妙 看到了已经删掉的项目 诡异
 
 
-## 元认知 
+
+# 开发注意事项
+
+## 🎉 v2.2 会话成果总结 (2025-09-16)
+
+### ✅ 本次会话完成的关键功能
+1. **📅 Schedule起始日期功能**:
+   - 为Schedule模型添加了start_date字段
+   - 更新了所有相关API支持起始日期
+   - 完善了前端Schedule管理界面，支持起始和截止日期
+
+2. **📊 Schedule时间条基础功能**:
+   - ✅ 在周视图网格上方添加了Schedule时间条展示区域
+   - ✅ 实现了API支持按日期范围查询Schedule数据
+   - ✅ 完成了基础的时间条渲染和颜色系统
+   - ✅ 添加了点击编辑Schedule的交互功能
+   - ✅ 实现了跨天Schedule的检测和显示逻辑
+
+### 🔄 当前待完成的时间条优化任务
+**用户反馈的改进需求(2025-09-16)**:
+1. **时间条布局优化**:
+   - 🔄 修改时间条为垂直堆叠布局，避免重叠遮盖
+   - 🔄 按截止时间排序确定垂直层次顺序
+   - ✅ 增加时间条区域高度至120px(已完成)
+
+2. **跨周连续时间条显示**:
+   - 🔄 实现真正的连续时间条逻辑(如9.1-10.1在9.22-9.28周显示为完整横条)
+   - 🔄 确保跨周Schedule显示为单条连续线而非分段
+
+3. **交互体验优化**:
+   - 🔄 优化悬停tooltip显示Schedule名称和日期信息
+   - ✅ 点击编辑功能已实现
+
+**当前代码状态**:
+- Schedule时间条基础框架已搭建完成
+- CSS样式已调整为支持垂直堆叠(position: relative)
+- 时间条区域高度已增加到120px
+- 需要修改renderScheduleTimeline()函数实现新的布局逻辑
+
+---
+
+## 🎉 v2.1 会话成果总结 (2025-09-15)
+
+### ✅ 已完成的关键功能
+1. **🔧 API错误修复**:
+   - 修复了statistics API的500错误
+   - 解决SQLAlchemy模型关系导入问题
+   - 添加缺失的activity_id和goal字段保持v1兼容
+
+2. **🏗️ Domain完整CRUD实现**:
+   - ✅ 编辑模态框 (showEditDomainModal)
+   - ✅ editDomain() 函数实现
+   - ✅ updateDomain() API调用函数
+   - ✅ deleteDomain() 删除功能
+
+3. **⚡ ActivityType完整CRUD实现**:
+   - ✅ 编辑模态框 (showEditActivityTypeModal)
+   - ✅ editActivityType() 函数实现
+   - ✅ updateActivityType() API调用函数
+   - ✅ deleteActivityType() 删除功能
+
+4. **🌐 服务器运行优化**:
+   - 修复端口冲突问题
+   - 服务器稳定运行在8002端口
+   - 完整的错误处理和用户反馈
+
+### 🎯 汇总视图v2.1 管理中心功能完成状态
+- ✅ **Domain管理**: 创建、查看、编辑、删除全功能
+- ✅ **ActivityType管理**: 创建、查看、编辑、删除全功能
+- ✅ **树状结构展示**: 完整的层级显示
+- ✅ **用户交互**: 直观的按钮操作和模态框体验
+
+### 💻 当前开发环境
+```bash
+# 启动开发服务器
+python run.py
+
+# 访问应用程序 (当前端口)
+http://127.0.0.1:8002
+
+# API 文档
+http://127.0.0.1:8002/docs
+```
+
+### 🚀 下次开发建议
+1. **周视图v2.1**: 重构拖拽交互，支持双轴矩阵选择
+2. **数据关联**: 实现Schedule与Domain的关联功能
+3. **事件管理**: 增强scheduled_events的v2.0字段使用
+
+---
+
+## 元认知
 LAE schedule 方面
 	汇总界面的更新 是比较小、好办的更新 只要描述清楚机制就行
 	有一些变化和新增 涉及的机制比较复杂 可以让claude对目前整体框架进行描述 然后我单独问GEMINI 从而获得元信息 哪些变化比较易得等等
+

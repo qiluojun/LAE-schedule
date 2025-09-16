@@ -87,6 +87,228 @@
             padding: 1rem;
             background-color: #f8f9fa;
         }
+
+        /* 层级池样式 v2.1 */
+        .hierarchical-pool {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+        }
+
+        .tree-node {
+            margin-bottom: 0.25rem;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 0.375rem 0.5rem;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 0.375rem;
+            cursor: grab;
+            transition: all 0.2s;
+            user-select: none; /* 防止文本选择干扰拖拽 */
+        }
+
+        .tree-node-content:hover {
+            background-color: #e3f2fd;
+            border-color: #90caf9;
+            transform: translateY(-1px);
+        }
+
+        .tree-node-content:active {
+            cursor: grabbing;
+        }
+
+        .tree-node-content * {
+            pointer-events: none; /* 子元素不拦截拖拽事件 */
+        }
+
+        /* v2.1 选择模式样式 */
+        .tree-node-content.selectable {
+            cursor: pointer;
+        }
+
+        .tree-node-content.selectable:hover {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .tree-node-content.selected {
+            background-color: #d4edda !important;
+            border-color: #28a745 !important;
+            border-width: 2px;
+        }
+
+        .tree-node-content.selectable * {
+            pointer-events: none; /* 保持子元素不拦截点击事件 */
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.5rem;
+            border: none;
+            background: none;
+            font-size: 12px;
+            font-weight: bold;
+            color: #6c757d;
+            cursor: pointer;
+            transition: transform 0.2s;
+            pointer-events: auto; /* 恢复折叠按钮的点击事件 */
+        }
+
+        .tree-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-toggle:hover {
+            color: #495057;
+        }
+
+        .tree-node-label {
+            flex: 1;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .tree-node-description {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.125rem;
+        }
+
+        .tree-children {
+            margin-left: 1.5rem;
+            padding-left: 0.5rem;
+            border-left: 2px solid #e9ecef;
+        }
+
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        /* Schedule时间条样式 */
+        .schedule-timeline-container {
+            display: grid;
+            grid-template-columns: auto repeat(7, 1fr);
+            gap: 8px;
+            background-color: #f8f9fa;
+            border-radius: 0.5rem 0.5rem 0 0;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+            min-height: 120px;
+            position: relative;
+        }
+
+        /* 月视图Schedule时间条样式 */
+        .schedule-bars-container {
+            position: absolute;
+            top: 25px;
+            left: 4px;
+            right: 4px;
+            z-index: 10;
+        }
+
+        .month-schedule-bar {
+            height: 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 1px;
+            width: 100%;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .month-schedule-bar:hover {
+            transform: scale(1.05);
+            opacity: 1 !important;
+            z-index: 20;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .schedule-timeline-label {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px;
+            border-radius: 0.25rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .schedule-timeline-day {
+            position: relative;
+            min-height: 96px;
+            border-radius: 0.25rem;
+            background-color: white;
+            border: 1px solid #e9ecef;
+            padding: 4px;
+        }
+
+        .schedule-bar {
+            position: relative;
+            height: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 2px;
+            width: 100%;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 6px;
+            margin-bottom: 2px;
+            width: 100%;
+        }
+
+        .schedule-bar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* 预定义的颜色系统 */
+        .schedule-color-0 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .schedule-color-1 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .schedule-color-2 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .schedule-color-3 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .schedule-color-4 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .schedule-color-5 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+        .schedule-color-6 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+        .schedule-color-7 { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
         .week-grid {
             display: grid;
             grid-template-columns: auto repeat(7, 1fr);
@@ -217,19 +439,36 @@
                 </div>
             </div>
             
-            <!-- 活动管理 -->
-            <div class="col-12">
+            <!-- v2.0 双轴矩阵管理 -->
+            <div class="col-md-6">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">活动管理</h5>
-                        <button class="btn btn-primary btn-sm" @click="showNewActivityModal = true">
-                            + 新建活动
+                        <h5 class="mb-0">🎯 领域管理 (Domains)</h5>
+                        <button class="btn btn-primary btn-sm" @click="showNewDomainModal = true">
+                            + 新建领域
                         </button>
                     </div>
                     <div class="card-body">
-                        <div id="activity-tree" class="mt-3">
-                            <!-- 活动树将在这里渲染 -->
-                            <div x-html="renderActivityTreeWithStats()"></div>
+                        <div id="domain-tree" class="mt-3">
+                            <!-- 领域树将在这里渲染 -->
+                            <div x-html="renderDomainTree()"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">⚡ 活动类型管理 (Activity Types)</h5>
+                        <button class="btn btn-success btn-sm" @click="showNewActivityTypeModal = true">
+                            + 新建类型
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="activity-type-tree" class="mt-3">
+                            <!-- 活动类型树将在这里渲染 -->
+                            <div x-html="renderActivityTypeTree()"></div>
                         </div>
                     </div>
                 </div>
@@ -238,14 +477,53 @@
 
         <!-- 周视图 -->
         <div x-show="currentView === 'week'" class="row">
-            <!-- 活动池 -->
+            <!-- v2.1 智能侧边栏 (选择模式) -->
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="mb-0">活动卡片池</h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">🎯 智能侧边栏</h6>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button"
+                                        class="btn"
+                                        :class="sidebarMode === 'domain' ? 'btn-primary' : 'btn-outline-primary'"
+                                        @click="setSidebarMode('domain')">
+                                    领域
+                                </button>
+                                <button type="button"
+                                        class="btn"
+                                        :class="sidebarMode === 'type' ? 'btn-primary' : 'btn-outline-primary'"
+                                        @click="setSidebarMode('type')">
+                                    类型
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="activity-pool" id="activity-pool" x-html="renderActivityPool()">
+                        <!-- 当前选中状态显示 -->
+                        <div class="alert alert-success small mb-3" x-show="selectedNode.id">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>已选中:</strong> <span x-text="selectedNode.name"></span>
+                                    <div class="small text-muted" x-text="selectedNode.type === 'domain' ? '🎯 领域' : '⚡ 类型'"></div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary" @click="clearSelectedNode()">清除</button>
+                            </div>
+                        </div>
+
+                        <!-- 使用说明 -->
+                        <div class="alert alert-info small mb-3" x-show="!selectedNode.id">
+                            💡 <strong>使用方式</strong>：<br>
+                            1. 点击下方节点选中<br>
+                            2. 然后点击右侧空白时间槽创建事件
+                        </div>
+
+                        <!-- Domain 视图 -->
+                        <div x-show="sidebarMode === 'domain'" class="selection-panel" x-html="renderSelectionDomainTree()">
+                        </div>
+
+                        <!-- ActivityType 视图 -->
+                        <div x-show="sidebarMode === 'type'" class="selection-panel" x-html="renderSelectionTypeTree()">
                         </div>
                     </div>
                 </div>
@@ -266,6 +544,10 @@
                         </div>
                     </div>
                     <div class="card-body p-0">
+                        <!-- Schedule时间条区域 -->
+                        <div class="schedule-timeline-container" id="schedule-timeline" x-html="renderScheduleTimeline()">
+                        </div>
+                        <!-- 周视图网格 -->
                         <div class="week-grid" id="week-grid" x-html="renderFullWeekGrid()">
                         </div>
                     </div>
@@ -299,6 +581,89 @@
                     </div>
                     <div id="month-calendar">
                         <!-- 月历将在这里渲染 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.1 新建事件模态框 (双轴矩阵) -->
+        <div x-show="showNewEventModal" class="modal" :class="{ 'd-block': showNewEventModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">✨ 新建事件 (双轴矩阵)</h5>
+                        <button type="button" class="btn-close" @click="showNewEventModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="createNewEvent()">
+                            <!-- 基本信息 -->
+                            <div class="row mb-3">
+                                <div class="col-8">
+                                    <label class="form-label">📅 日期</label>
+                                    <input type="date" class="form-control" x-model="newEvent.event_date" required readonly>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">⏰ 时间槽</label>
+                                    <select class="form-control" x-model="newEvent.time_slot" required>
+                                        <template x-for="slot in timeSlots" :key="slot.value">
+                                            <option :value="slot.value" x-text="slot.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 事件名称 -->
+                            <div class="mb-3">
+                                <label class="form-label">📝 事件名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" x-model="newEvent.name"
+                                       placeholder="描述你要做的具体事情" required>
+                            </div>
+
+                            <!-- 双轴矩阵选择 -->
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">🎯 领域 (为了什么)</label>
+                                    <select class="form-control" x-model="newEvent.domain_id">
+                                        <option value="">未指定领域</option>
+                                        <template x-for="domain in flatDomains" :key="domain.id">
+                                            <option :value="domain.id" x-text="domain.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">⚡ 类型 (做什么性质)</label>
+                                    <select class="form-control" x-model="newEvent.activity_type_id">
+                                        <option value="">未指定类型</option>
+                                        <template x-for="type in flatActivityTypes" :key="type.id">
+                                            <option :value="type.id" x-text="type.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 关联日程 -->
+                            <div class="mb-3" x-show="newEvent.domain_id">
+                                <label class="form-label">📋 关联日程 (可选)</label>
+                                <select class="form-control" x-model="newEvent.schedule_id">
+                                    <option value="">无关联日程</option>
+                                    <template x-for="schedule in getSchedulesForDomain(newEvent.domain_id)" :key="schedule.id">
+                                        <option :value="schedule.id" x-text="schedule.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- 备注 -->
+                            <div class="mb-3">
+                                <label class="form-label">📋 备注</label>
+                                <textarea class="form-control" rows="2" x-model="newEvent.notes"
+                                          placeholder="任何额外信息..."></textarea>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showNewEventModal = false">取消</button>
+                                <button type="submit" class="btn btn-primary">✨ 创建事件</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -369,54 +734,403 @@
             </div>
         </div>
 
-        <!-- 编辑日程模态框 - 只在周视图中显示 -->
+        <!-- v2.1 编辑事件模态框 (双轴矩阵) - 只在周视图中显示 -->
         <div x-show="showEditEventModal && currentView === 'week'" class="modal" :class="{ 'd-block': showEditEventModal && currentView === 'week' }" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">编辑日程</h5>
+                        <h5 class="modal-title">📝 编辑事件 (双轴矩阵)</h5>
                         <button type="button" class="btn-close" @click="forceCloseModal()"></button>
                     </div>
                     <div class="modal-body">
-                        <form @submit.prevent="saveScheduledEvent()">
+                        <form @submit.prevent="saveEditedEvent()">
+                            <!-- 基本信息 -->
+                            <div class="row mb-3">
+                                <div class="col-8">
+                                    <label class="form-label">📅 日期</label>
+                                    <input type="date" class="form-control" x-model="editingEvent.event_date" required readonly>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">⏰ 时间槽</label>
+                                    <select class="form-control" x-model="editingEvent.time_slot" required>
+                                        <template x-for="slot in timeSlots" :key="slot.value">
+                                            <option :value="slot.value" x-text="slot.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 事件名称 -->
                             <div class="mb-3">
-                                <label class="form-label">日期时间</label>
-                                <div class="row">
-                                    <div class="col-8">
-                                        <input type="date" class="form-control" x-model="editingEvent.event_date" required readonly>
+                                <label class="form-label">📝 事件名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" x-model="editingEvent.name"
+                                       placeholder="描述你要做的具体事情" required>
+                            </div>
+
+                            <!-- 双轴矩阵选择 -->
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">🎯 领域 (为了什么)</label>
+                                    <select class="form-control" x-model="editingEvent.domain_id">
+                                        <option value="">未指定领域</option>
+                                        <template x-for="domain in flatDomains" :key="domain.id">
+                                            <option :value="domain.id" x-text="domain.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">⚡ 类型 (做什么性质)</label>
+                                    <select class="form-control" x-model="editingEvent.activity_type_id">
+                                        <option value="">未指定类型</option>
+                                        <template x-for="type in flatActivityTypes" :key="type.id">
+                                            <option :value="type.id" x-text="type.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 关联日程 -->
+                            <div class="mb-3" x-show="editingEvent.domain_id">
+                                <label class="form-label">📋 关联日程 (可选)</label>
+                                <select class="form-control" x-model="editingEvent.schedule_id">
+                                    <option value="">无关联日程</option>
+                                    <template x-for="schedule in getSchedulesForDomain(editingEvent.domain_id)" :key="schedule.id">
+                                        <option :value="schedule.id" x-text="schedule.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- v1兼容：目标字段 -->
+                            <div class="mb-3" x-show="editingEvent.goal || editingEvent.activity_name">
+                                <label class="form-label">🎯 目标 (v1兼容)</label>
+                                <input type="text" class="form-control" x-model="editingEvent.goal"
+                                       placeholder="本次要达成的具体目标">
+                                <div class="form-text text-muted" x-show="editingEvent.activity_name">
+                                    原活动：<span x-text="editingEvent.activity_name"></span>
+                                </div>
+                            </div>
+
+                            <!-- 备注 -->
+                            <div class="mb-3">
+                                <label class="form-label">📋 备注</label>
+                                <textarea class="form-control" rows="2" x-model="editingEvent.notes"
+                                          placeholder="任何额外信息..."></textarea>
+                            </div>
+
+                            <!-- 状态 -->
+                            <div class="mb-3">
+                                <label class="form-label">📊 状态</label>
+                                <select class="form-control" x-model="editingEvent.status">
+                                    <option value="planned">📋 计划中</option>
+                                    <option value="completed">✅ 已完成</option>
+                                </select>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="button" class="btn btn-danger me-2" @click="deleteEditedEvent()" x-show="editingEvent.id">🗑️ 删除</button>
+                                <button type="button" class="btn btn-secondary me-2" @click="forceCloseModal()">取消</button>
+                                <button type="submit" class="btn btn-primary">💾 保存修改</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.0 新建Domain模态框 -->
+        <div x-show="showNewDomainModal" class="modal" :class="{ 'd-block': showNewDomainModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">🎯 新建领域</h5>
+                        <button type="button" class="btn-close" @click="showNewDomainModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="createDomain()">
+                            <div class="mb-3">
+                                <label class="form-label">领域名称</label>
+                                <input type="text" class="form-control" x-model="newDomain.name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">父领域（可选）</label>
+                                <select class="form-control" x-model="newDomain.parent_id">
+                                    <option value="">根级领域</option>
+                                    <template x-for="domain in flatDomains" :key="domain.id">
+                                        <option :value="domain.id" x-text="domain.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">领域描述</label>
+                                <textarea class="form-control" x-model="newDomain.description" rows="3"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showNewDomainModal = false">取消</button>
+                                <button type="submit" class="btn btn-primary">创建</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.0 新建ActivityType模态框 -->
+        <div x-show="showNewActivityTypeModal" class="modal" :class="{ 'd-block': showNewActivityTypeModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">⚡ 新建活动类型</h5>
+                        <button type="button" class="btn-close" @click="showNewActivityTypeModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="createActivityType()">
+                            <div class="mb-3">
+                                <label class="form-label">类型名称</label>
+                                <input type="text" class="form-control" x-model="newActivityType.name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">父类型（可选）</label>
+                                <select class="form-control" x-model="newActivityType.parent_id">
+                                    <option value="">根级类型</option>
+                                    <template x-for="type in flatActivityTypes" :key="type.id">
+                                        <option :value="type.id" x-text="type.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">类型描述</label>
+                                <textarea class="form-control" x-model="newActivityType.description" rows="3"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showNewActivityTypeModal = false">取消</button>
+                                <button type="submit" class="btn btn-success">创建</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.0 编辑Domain模态框 -->
+        <div x-show="showEditDomainModal" class="modal" :class="{ 'd-block': showEditDomainModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">🎯 编辑领域</h5>
+                        <button type="button" class="btn-close" @click="showEditDomainModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="updateDomain()">
+                            <div class="mb-3">
+                                <label class="form-label">领域名称</label>
+                                <input type="text" class="form-control" x-model="editingDomain.name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">父领域（可选）</label>
+                                <select class="form-control" x-model="editingDomain.parent_id">
+                                    <option value="">根级领域</option>
+                                    <template x-for="domain in flatDomains" :key="domain.id">
+                                        <option :value="domain.id" x-text="domain.name" :disabled="domain.id === editingDomain.id"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">领域描述</label>
+                                <textarea class="form-control" x-model="editingDomain.description" rows="3"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showEditDomainModal = false">取消</button>
+                                <button type="submit" class="btn btn-primary">更新</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule管理模态框 -->
+        <div x-show="showScheduleManageModal" class="modal" :class="{ 'd-block': showScheduleManageModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">📅 管理日程 - <span x-text="currentDomainName"></span></h5>
+                        <button type="button" class="btn-close" @click="closeScheduleManageModal()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- 新建Schedule按钮 -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">现有日程</h6>
+                            <button class="btn btn-primary btn-sm" @click="showNewScheduleForm = true">+ 新建日程</button>
+                        </div>
+
+                        <!-- 新建Schedule表单 -->
+                        <div x-show="showNewScheduleForm" class="card mb-3">
+                            <div class="card-body">
+                                <form @submit.prevent="createSchedule()">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                                <label class="form-label">日程名称</label>
+                                                <input type="text" class="form-control" x-model="newSchedule.name" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">起始日期</label>
+                                                <input type="datetime-local" class="form-control" x-model="newSchedule.start_date">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">截止日期</label>
+                                                <input type="datetime-local" class="form-control" x-model="newSchedule.deadline">
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-4">
-                                        <select class="form-control" x-model="editingEvent.time_slot" required>
-                                            <template x-for="slot in timeSlots" :key="slot.value">
-                                                <option :value="slot.value" x-text="slot.name"></option>
-                                            </template>
+                                    <div class="mb-3">
+                                        <label class="form-label">描述</label>
+                                        <textarea class="form-control" x-model="newSchedule.description" rows="2"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">状态</label>
+                                        <select class="form-select" x-model="newSchedule.status">
+                                            <option value="ongoing">进行中</option>
+                                            <option value="completed">已完成</option>
+                                            <option value="paused">已暂停</option>
+                                            <option value="cancelled">已取消</option>
                                         </select>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="button" class="btn btn-secondary me-2" @click="showNewScheduleForm = false">取消</button>
+                                        <button type="submit" class="btn btn-primary">创建</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Schedule列表 -->
+                        <div class="schedule-list">
+                            <template x-for="schedule in currentDomainSchedules" :key="schedule.id">
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1" x-text="schedule.name"></h6>
+                                                <p class="card-text text-muted mb-1" x-text="schedule.description || '无描述'"></p>
+                                                <div class="d-flex align-items-center flex-wrap">
+                                                    <span class="badge me-2 mb-1" :class="{
+                                                        'bg-primary': schedule.status === 'ongoing',
+                                                        'bg-success': schedule.status === 'completed',
+                                                        'bg-warning': schedule.status === 'paused',
+                                                        'bg-danger': schedule.status === 'cancelled'
+                                                    }" x-text="getStatusText(schedule.status)"></span>
+                                                    <small class="text-muted me-3 mb-1" x-show="schedule.start_date">
+                                                        起始: <span x-text="formatDateTime(schedule.start_date)"></span>
+                                                    </small>
+                                                    <small class="text-muted mb-1" x-show="schedule.deadline">
+                                                        截止: <span x-text="formatDateTime(schedule.deadline)"></span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline-primary" @click="editSchedule(schedule)">编辑</button>
+                                                <button class="btn btn-sm btn-outline-danger" @click="deleteSchedule(schedule.id)">删除</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="!currentDomainSchedules.length" class="text-center text-muted py-4">
+                                <p>该领域暂无日程</p>
+                                <button class="btn btn-outline-primary btn-sm" @click="showNewScheduleForm = true">创建第一个日程</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑Schedule模态框 -->
+        <div x-show="showEditScheduleModal" class="modal" :class="{ 'd-block': showEditScheduleModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">📅 编辑日程</h5>
+                        <button type="button" class="btn-close" @click="showEditScheduleModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="updateSchedule()">
+                            <div class="mb-3">
+                                <label class="form-label">日程名称</label>
+                                <input type="text" class="form-control" x-model="editingSchedule.name" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">起始日期</label>
+                                        <input type="datetime-local" class="form-control" x-model="editingSchedule.start_date">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">截止日期</label>
+                                        <input type="datetime-local" class="form-control" x-model="editingSchedule.deadline">
                                     </div>
                                 </div>
                             </div>
-                            <div class="mb-3" x-show="editingEvent.activity_name">
-                                <label class="form-label">活动</label>
-                                <input type="text" class="form-control" :value="editingEvent.activity_name" readonly>
-                            </div>
                             <div class="mb-3">
-                                <label class="form-label">目标</label>
-                                <input type="text" class="form-control" x-model="editingEvent.goal" placeholder="本次要达成的具体目标">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">备注</label>
-                                <textarea class="form-control" rows="3" x-model="editingEvent.notes" placeholder="额外备注信息"></textarea>
+                                <label class="form-label">描述</label>
+                                <textarea class="form-control" x-model="editingSchedule.description" rows="3"></textarea>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">状态</label>
-                                <select class="form-control" x-model="editingEvent.status">
-                                    <option value="planned">计划中</option>
+                                <select class="form-select" x-model="editingSchedule.status">
+                                    <option value="ongoing">进行中</option>
                                     <option value="completed">已完成</option>
+                                    <option value="paused">已暂停</option>
+                                    <option value="cancelled">已取消</option>
                                 </select>
                             </div>
                             <div class="text-end">
-                                <button type="button" class="btn btn-danger me-2" @click="deleteScheduledEvent()" x-show="editingEvent.id">删除</button>
-                                <button type="button" class="btn btn-secondary me-2" @click="forceCloseModal()">取消</button>
-                                <button type="submit" class="btn btn-primary">保存</button>
+                                <button type="button" class="btn btn-secondary me-2" @click="showEditScheduleModal = false">取消</button>
+                                <button type="submit" class="btn btn-primary">更新</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.0 编辑ActivityType模态框 -->
+        <div x-show="showEditActivityTypeModal" class="modal" :class="{ 'd-block': showEditActivityTypeModal }" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">⚡ 编辑活动类型</h5>
+                        <button type="button" class="btn-close" @click="showEditActivityTypeModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="updateActivityType()">
+                            <div class="mb-3">
+                                <label class="form-label">类型名称</label>
+                                <input type="text" class="form-control" x-model="editingActivityType.name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">父类型（可选）</label>
+                                <select class="form-control" x-model="editingActivityType.parent_id">
+                                    <option value="">根级类型</option>
+                                    <template x-for="type in flatActivityTypes" :key="type.id">
+                                        <option :value="type.id" x-text="type.name" :disabled="type.id === editingActivityType.id"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">类型描述</label>
+                                <textarea class="form-control" x-model="editingActivityType.description" rows="3"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" @click="showEditActivityTypeModal = false">取消</button>
+                                <button type="submit" class="btn btn-success">更新</button>
                             </div>
                         </form>
                     </div>
@@ -466,14 +1180,100 @@
                 showNewActivityModal: false,
                 showEditActivityModal: false,
                 showEditEventModal: false,
-                
+                // v2.1 新建事件模态框
+                showNewEventModal: false,
+                // v2.0 新增模态框状态
+                showNewDomainModal: false,
+                showNewActivityTypeModal: false,
+                showEditDomainModal: false,
+                showEditActivityTypeModal: false,
+                // Schedule管理模态框状态
+                showScheduleManageModal: false,
+                showEditScheduleModal: false,
+                showNewScheduleForm: false,
+
+                // v2.0 数据状态
+                domains: [],
+                flatDomains: [],
+                activityTypes: [],
+                flatActivityTypes: [],
+                domainScheduleCounts: {},  // 存储每个Domain的Schedule数量
+                weeklySchedules: [],  // 当前周的Schedule数据
+
+                // v2.1 侧边栏状态
+                sidebarMode: 'domain', // 'domain' or 'type'
+                domainTree: [],
+                typeTree: [],
+                collapsedNodes: new Set(), // 存储折叠的节点ID
+                selectedNode: { // 当前选中的节点
+                    id: null,
+                    name: '',
+                    type: '', // 'domain' or 'type'
+                    description: ''
+                },
+
                 // 表单数据
                 newActivity: {
                     name: '',
                     parent_id: '',
                     description: ''
                 },
-                
+                // v2.1 新建事件表单数据
+                newEvent: {
+                    name: '',
+                    event_date: '',
+                    time_slot: '',
+                    domain_id: '',
+                    activity_type_id: '',
+                    schedule_id: '',
+                    notes: ''
+                },
+                // v2.0 新增表单数据
+                newDomain: {
+                    name: '',
+                    parent_id: '',
+                    description: ''
+                },
+                newActivityType: {
+                    name: '',
+                    parent_id: '',
+                    description: ''
+                },
+
+                // v2.0 编辑表单数据
+                editingDomain: {
+                    id: null,
+                    name: '',
+                    parent_id: '',
+                    description: ''
+                },
+                editingActivityType: {
+                    id: null,
+                    name: '',
+                    parent_id: '',
+                    description: ''
+                },
+
+                // Schedule管理数据
+                currentDomainId: null,
+                currentDomainName: '',
+                currentDomainSchedules: [],
+                newSchedule: {
+                    name: '',
+                    description: '',
+                    start_date: '',
+                    deadline: '',
+                    status: 'ongoing'
+                },
+                editingSchedule: {
+                    id: null,
+                    name: '',
+                    description: '',
+                    start_date: '',
+                    deadline: '',
+                    status: 'ongoing'
+                },
+
                 editingActivity: {
                     id: null,
                     name: '',
@@ -499,10 +1299,21 @@
                     console.log('Force closing modal');
                     console.log('Before reset - showEditEventModal:', this.showEditEventModal);
                     console.log('Before reset - currentView:', this.currentView);
-                    
+
                     this.showEditEventModal = false;
                     this.showNewActivityModal = false;
                     this.showEditActivityModal = false;
+                    // v2.1 新建事件模态框重置
+                    this.showNewEventModal = false;
+                    // v2.0 新增模态框重置
+                    this.showNewDomainModal = false;
+                    this.showNewActivityTypeModal = false;
+                    this.showEditDomainModal = false;
+                    this.showEditActivityTypeModal = false;
+                    // Schedule模态框重置
+                    this.showScheduleManageModal = false;
+                    this.showEditScheduleModal = false;
+                    this.showNewScheduleForm = false;
                     
                     console.log('After reset - showEditEventModal:', this.showEditEventModal);
                     console.log('Modal condition check:', this.showEditEventModal && this.currentView === 'week');
@@ -539,9 +1350,21 @@
                     // 强制重置所有模态框状态
                     this.forceCloseModal();
                     
-                    await this.loadActivities();
-                    console.log('Activities loaded, count:', this.flatActivities.length);
-                    
+                    // 暂时跳过v1.0 activities加载，避免500错误
+                    // await this.loadActivities();
+                    console.log('Skipping v1.0 activities for now');
+
+                    // v2.0 数据加载
+                    await this.loadDomains();
+                    console.log('Domains loaded, count:', this.domains.length);
+
+                    await this.loadActivityTypes();
+                    console.log('ActivityTypes loaded, count:', this.activityTypes.length);
+
+                    // v2.1 侧边栏初始化
+                    await this.loadDomainTree();
+                    console.log('Domain tree loaded for sidebar');
+
                     this.updateWeekDates();
                     console.log('Week dates updated:', this.weekDates);
                     
@@ -558,17 +1381,15 @@
                     this.$nextTick(() => {
                         console.log('DOM updated, initializing drag and drop in 300ms...');
                         
-                        // 如果是周视图，手动渲染网格
+                        // 如果是周视图，手动渲染网格和时间条
                         if (this.currentView === 'week') {
-                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                            if (gridContainer) {
-                                gridContainer.innerHTML = this.renderFullWeekGrid();
-                                console.log('Week grid manually rendered');
-                            }
+                            this.rerenderWeekView();
+                            console.log('Week view manually rendered');
                         }
                         
                         setTimeout(() => {
                             this.initDragAndDrop();
+                            // v2.1 不再需要侧边栏拖拽初始化（改为选择+点击模式）
                         }, 300);
                     });
                 },
@@ -652,8 +1473,575 @@
                         console.error('创建活动失败:', error);
                     }
                 },
-                
-                // 编辑活动
+
+                // v2.0 CRUD 方法
+                async createDomain() {
+                    try {
+                        const domainData = {
+                            name: this.newDomain.name,
+                            description: this.newDomain.description || null,
+                            parent_id: this.newDomain.parent_id || null
+                        };
+
+                        const response = await fetch('/api/domains/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(domainData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ Domain created successfully');
+                        this.showNewDomainModal = false;
+                        this.newDomain = { name: '', parent_id: '', description: '' };
+
+                        // 重新加载domains数据
+                        await this.loadDomains();
+
+                    } catch (error) {
+                        console.error('创建领域失败:', error);
+                        alert('创建领域失败: ' + error.message);
+                    }
+                },
+
+                async updateDomain() {
+                    try {
+                        const domainData = {
+                            name: this.editingDomain.name,
+                            description: this.editingDomain.description || null,
+                            parent_id: this.editingDomain.parent_id || null
+                        };
+
+                        const response = await fetch(`/api/domains/${this.editingDomain.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(domainData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ Domain updated successfully');
+                        this.showEditDomainModal = false;
+
+                        // 重新加载domains数据
+                        await this.loadDomains();
+
+                    } catch (error) {
+                        console.error('更新领域失败:', error);
+                        alert('更新领域失败: ' + error.message);
+                    }
+                },
+
+                async createActivityType() {
+                    try {
+                        const typeData = {
+                            name: this.newActivityType.name,
+                            description: this.newActivityType.description || null,
+                            parent_id: this.newActivityType.parent_id || null
+                        };
+
+                        const response = await fetch('/api/activity-types/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(typeData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ ActivityType created successfully');
+                        this.showNewActivityTypeModal = false;
+                        this.newActivityType = { name: '', parent_id: '', description: '' };
+
+                        // 重新加载activity types数据
+                        await this.loadActivityTypes();
+
+                    } catch (error) {
+                        console.error('创建活动类型失败:', error);
+                        alert('创建活动类型失败: ' + error.message);
+                    }
+                },
+
+                // v2.1 创建新事件（双轴矩阵）
+                async createNewEvent() {
+                    try {
+                        if (!this.newEvent.name.trim()) {
+                            alert('请输入事件名称');
+                            return;
+                        }
+
+                        const eventData = {
+                            name: this.newEvent.name.trim(),
+                            event_date: this.newEvent.event_date,
+                            time_slot: parseInt(this.newEvent.time_slot),
+                            domain_id: this.newEvent.domain_id && this.newEvent.domain_id !== '' ? parseInt(this.newEvent.domain_id) : null,
+                            activity_type_id: this.newEvent.activity_type_id && this.newEvent.activity_type_id !== '' ? parseInt(this.newEvent.activity_type_id) : null,
+                            schedule_id: this.newEvent.schedule_id && this.newEvent.schedule_id !== '' ? parseInt(this.newEvent.schedule_id) : null,
+                            notes: this.newEvent.notes || '',
+                            status: 'planned'
+                        };
+
+                        console.log('🎯 Creating new event with data:', eventData);
+
+                        const response = await fetch('/api/events/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(eventData)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || 'Unknown error'}`);
+                        }
+
+                        const createdEvent = await response.json();
+                        console.log('✅ Event created successfully:', createdEvent);
+
+                        // 关闭模态框并重置表单
+                        this.showNewEventModal = false;
+                        this.newEvent = {
+                            name: '',
+                            event_date: '',
+                            time_slot: '',
+                            domain_id: '',
+                            activity_type_id: '',
+                            schedule_id: '',
+                            notes: ''
+                        };
+
+                        // 重新加载周数据
+                        await this.loadWeekSchedule();
+
+                        // v2.1 改进：保留选中状态以便快速批量创建
+                        console.log('✅ Event created, keeping selected node for batch creation');
+
+                    } catch (error) {
+                        console.error('❌ 创建事件失败:', error);
+                        alert('创建事件失败: ' + error.message);
+                    }
+                },
+
+                // 获取指定领域的日程列表
+                getSchedulesForDomain(domainId) {
+                    if (!domainId) return [];
+                    // 这里需要实现获取schedules的逻辑
+                    // 暂时返回空数组，后续可以加载schedules数据
+                    return [];
+                },
+
+                async updateActivityType() {
+                    try {
+                        const typeData = {
+                            name: this.editingActivityType.name,
+                            description: this.editingActivityType.description || null,
+                            parent_id: this.editingActivityType.parent_id || null
+                        };
+
+                        const response = await fetch(`/api/activity-types/${this.editingActivityType.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(typeData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ ActivityType updated successfully');
+                        this.showEditActivityTypeModal = false;
+
+                        // 重新加载activity types数据
+                        await this.loadActivityTypes();
+
+                    } catch (error) {
+                        console.error('更新活动类型失败:', error);
+                        alert('更新活动类型失败: ' + error.message);
+                    }
+                },
+
+                editDomain(domainId) {
+                    const domain = this.domains.find(d => d.id === domainId);
+                    if (!domain) {
+                        console.error('Domain not found:', domainId);
+                        return;
+                    }
+
+                    this.editingDomain = {
+                        id: domain.id,
+                        name: domain.name,
+                        description: domain.description || '',
+                        parent_id: domain.parent_id
+                    };
+                    this.showEditDomainModal = true;
+                },
+
+                async deleteDomain(domainId) {
+                    if (confirm('确定要删除这个领域吗？这将同时删除所有子领域。')) {
+                        try {
+                            const response = await fetch(`/api/domains/${domainId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            console.log('✅ Domain deleted successfully');
+
+                            // 重新加载domains数据
+                            await this.loadDomains();
+
+                        } catch (error) {
+                            console.error('删除领域失败:', error);
+                            alert('删除领域失败: ' + error.message);
+                        }
+                    }
+                },
+
+                // ===== Schedule管理功能 =====
+                async manageSchedules(domainId) {
+                    const domain = this.domains.find(d => d.id === domainId);
+                    if (!domain) {
+                        console.error('Domain not found:', domainId);
+                        return;
+                    }
+
+                    this.currentDomainId = domainId;
+                    this.currentDomainName = domain.name;
+                    this.showScheduleManageModal = true;
+
+                    // 加载该Domain的Schedules
+                    await this.loadDomainSchedules(domainId);
+                },
+
+                async loadDomainSchedules(domainId) {
+                    try {
+                        console.log('📅 Loading schedules for domain:', domainId);
+                        const response = await fetch(`/api/schedules/?domain_id=${domainId}`);
+                        if (!response.ok) throw new Error('Failed to load schedules');
+
+                        this.currentDomainSchedules = await response.json();
+                        console.log('✅ Domain schedules loaded:', this.currentDomainSchedules.length, 'schedules');
+                    } catch (error) {
+                        console.error('❌ Error loading domain schedules:', error);
+                        this.currentDomainSchedules = [];
+                    }
+                },
+
+                closeScheduleManageModal() {
+                    this.showScheduleManageModal = false;
+                    this.showNewScheduleForm = false;
+                    this.currentDomainId = null;
+                    this.currentDomainName = '';
+                    this.currentDomainSchedules = [];
+                    this.newSchedule = {
+                        name: '',
+                        description: '',
+                        start_date: '',
+                        deadline: '',
+                        status: 'ongoing'
+                    };
+                    // 重新加载Schedule数量以更新显示
+                    this.loadDomainScheduleCounts();
+                },
+
+                async createSchedule() {
+                    try {
+                        const scheduleData = {
+                            domain_id: this.currentDomainId,
+                            name: this.newSchedule.name,
+                            description: this.newSchedule.description || null,
+                            start_date: this.newSchedule.start_date || null,
+                            deadline: this.newSchedule.deadline || null,
+                            status: this.newSchedule.status
+                        };
+
+                        const response = await fetch('/api/schedules/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(scheduleData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ Schedule created successfully');
+                        this.showNewScheduleForm = false;
+                        this.newSchedule = {
+                            name: '',
+                            description: '',
+                            start_date: '',
+                            deadline: '',
+                            status: 'ongoing'
+                        };
+
+                        // 重新加载该Domain的Schedules
+                        await this.loadDomainSchedules(this.currentDomainId);
+
+                    } catch (error) {
+                        console.error('创建日程失败:', error);
+                        alert('创建日程失败: ' + error.message);
+                    }
+                },
+
+                editSchedule(schedule) {
+                    this.editingSchedule = {
+                        id: schedule.id,
+                        name: schedule.name,
+                        description: schedule.description || '',
+                        start_date: schedule.start_date ? this.formatDateTimeForInput(schedule.start_date) : '',
+                        deadline: schedule.deadline ? this.formatDateTimeForInput(schedule.deadline) : '',
+                        status: schedule.status
+                    };
+                    this.showEditScheduleModal = true;
+                },
+
+                async updateSchedule() {
+                    try {
+                        const scheduleData = {
+                            name: this.editingSchedule.name,
+                            description: this.editingSchedule.description || null,
+                            start_date: this.editingSchedule.start_date || null,
+                            deadline: this.editingSchedule.deadline || null,
+                            status: this.editingSchedule.status
+                        };
+
+                        const response = await fetch(`/api/schedules/${this.editingSchedule.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(scheduleData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ Schedule updated successfully');
+                        this.showEditScheduleModal = false;
+
+                        // 重新加载该Domain的Schedules
+                        await this.loadDomainSchedules(this.currentDomainId);
+
+                    } catch (error) {
+                        console.error('更新日程失败:', error);
+                        alert('更新日程失败: ' + error.message);
+                    }
+                },
+
+                async deleteSchedule(scheduleId) {
+                    if (confirm('确定要删除这个日程吗？')) {
+                        try {
+                            const response = await fetch(`/api/schedules/${scheduleId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            console.log('✅ Schedule deleted successfully');
+
+                            // 重新加载该Domain的Schedules
+                            await this.loadDomainSchedules(this.currentDomainId);
+
+                        } catch (error) {
+                            console.error('删除日程失败:', error);
+                            alert('删除日程失败: ' + error.message);
+                        }
+                    }
+                },
+
+                // Schedule辅助函数
+                getStatusText(status) {
+                    const statusMap = {
+                        'ongoing': '进行中',
+                        'completed': '已完成',
+                        'paused': '已暂停',
+                        'cancelled': '已取消'
+                    };
+                    return statusMap[status] || status;
+                },
+
+                formatDateTime(dateTimeStr) {
+                    if (!dateTimeStr) return '';
+                    const date = new Date(dateTimeStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                formatDateTimeForInput(dateTimeStr) {
+                    if (!dateTimeStr) return '';
+                    const date = new Date(dateTimeStr);
+                    return date.toISOString().slice(0, 16); // 格式: YYYY-MM-DDTHH:mm
+                },
+
+                // 加载所有Domain的Schedule数量
+                async loadDomainScheduleCounts() {
+                    try {
+                        console.log('📊 Loading domain schedule counts...');
+                        const response = await fetch('/api/schedules/');
+                        if (!response.ok) throw new Error('Failed to load schedules');
+
+                        const allSchedules = await response.json();
+
+                        // 统计每个Domain的Schedule数量
+                        this.domainScheduleCounts = {};
+                        allSchedules.forEach(schedule => {
+                            const domainId = schedule.domain_id;
+                            this.domainScheduleCounts[domainId] = (this.domainScheduleCounts[domainId] || 0) + 1;
+                        });
+
+                        console.log('✅ Domain schedule counts loaded:', this.domainScheduleCounts);
+                    } catch (error) {
+                        console.error('❌ Error loading domain schedule counts:', error);
+                        this.domainScheduleCounts = {};
+                    }
+                },
+
+                // 获取指定Domain的Schedule数量
+                getDomainScheduleCount(domainId) {
+                    return this.domainScheduleCounts[domainId] || 0;
+                },
+
+                // 加载当前周的Schedule数据
+                async loadWeeklySchedules() {
+                    try {
+                        console.log('📅 Loading weekly schedules...');
+
+                        // 计算当前周的开始和结束日期
+                        const startDate = new Date(this.currentWeekStart);
+                        const endDate = new Date(this.currentWeekStart);
+                        endDate.setDate(endDate.getDate() + 6); // 周日
+
+                        const startStr = startDate.toISOString().split('T')[0];
+                        const endStr = endDate.toISOString().split('T')[0];
+
+                        console.log('Week range:', startStr, 'to', endStr);
+
+                        const response = await fetch(`/api/schedules/?start_date=${startStr}&end_date=${endStr}`);
+                        if (!response.ok) throw new Error('Failed to load weekly schedules');
+
+                        this.weeklySchedules = await response.json();
+                        console.log('✅ Weekly schedules loaded:', this.weeklySchedules.length, 'schedules');
+                    } catch (error) {
+                        console.error('❌ Error loading weekly schedules:', error);
+                        this.weeklySchedules = [];
+                    }
+                },
+
+                editActivityType(typeId) {
+                    const activityType = this.activityTypes.find(t => t.id === typeId);
+                    if (!activityType) {
+                        console.error('ActivityType not found:', typeId);
+                        return;
+                    }
+
+                    this.editingActivityType = {
+                        id: activityType.id,
+                        name: activityType.name,
+                        description: activityType.description || '',
+                        parent_id: activityType.parent_id
+                    };
+                    this.showEditActivityTypeModal = true;
+                },
+
+                async deleteActivityType(typeId) {
+                    if (confirm('确定要删除这个活动类型吗？这将同时删除所有子类型。')) {
+                        try {
+                            const response = await fetch(`/api/activity-types/${typeId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            console.log('✅ ActivityType deleted successfully');
+
+                            // 重新加载activity types数据
+                            await this.loadActivityTypes();
+
+                        } catch (error) {
+                            console.error('删除活动类型失败:', error);
+                            alert('删除活动类型失败: ' + error.message);
+                        }
+                    }
+                },
+
+                // 加载v2.0数据
+                async loadDomains() {
+                    try {
+                        const response = await fetch('/api/domains/');
+                        if (response.ok) {
+                            this.domains = await response.json();
+                            this.flatDomains = [...this.domains];
+                            console.log('✅ Domains loaded:', this.domains.length);
+                        } else {
+                            console.warn('⚠️  Failed to load domains, using fallback');
+                            this.domains = [];
+                            this.flatDomains = [];
+                        }
+                    } catch (error) {
+                        console.error('❌ Error loading domains:', error);
+                        this.domains = [];
+                        this.flatDomains = [];
+                    }
+                },
+
+                async loadActivityTypes() {
+                    try {
+                        const response = await fetch('/api/activity-types/');
+                        if (response.ok) {
+                            this.activityTypes = await response.json();
+                            this.flatActivityTypes = [...this.activityTypes];
+                            console.log('✅ ActivityTypes loaded:', this.activityTypes.length);
+                        } else {
+                            console.warn('⚠️  Failed to load activity types, using fallback');
+                            this.activityTypes = [];
+                            this.flatActivityTypes = [];
+                        }
+                    } catch (error) {
+                        console.error('❌ Error loading activity types:', error);
+                        this.activityTypes = [];
+                        this.flatActivityTypes = [];
+                    }
+                },
+
+                // 编辑活动 (v1.0保留)
                 editActivity(activityId) {
                     const activity = this.flatActivities.find(a => a.id === activityId);
                     if (!activity) {
@@ -717,13 +2105,10 @@
                         
                         await this.loadWeekSchedule();
                         
-                        // 强制重新渲染网格
+                        // 强制重新渲染网格和时间条
                         this.$nextTick(() => {
                             // 手动触发重新渲染
-                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                            if (gridContainer) {
-                                gridContainer.innerHTML = this.renderFullWeekGrid();
-                            }
+                            this.rerenderWeekView();
                             
                             console.log('Week view DOM updated, checking elements...');
                             console.log('Activity pool element:', document.getElementById('activity-pool'));
@@ -768,6 +2153,9 @@
                         });
                         console.log('Week schedule loaded:', this.weekSchedule);
                         console.log('Schedule data structure:', data);
+
+                        // 同时加载当前周的Schedule时间条数据
+                        await this.loadWeeklySchedules();
                     } catch (error) {
                         console.error('加载周日程失败:', error);
                         // 即使加载失败也要初始化空的周日程对象
@@ -787,16 +2175,13 @@
 
                     // 确保切换周后重新初始化拖拽功能
                     this.$nextTick(() => {
-                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                        if (gridContainer) {
-                            gridContainer.innerHTML = this.renderFullWeekGrid();
-                            console.log('周数据切换后重新渲染网格');
+                        this.rerenderWeekView();
+                        console.log('周数据切换后重新渲染网格和时间条');
 
-                            setTimeout(() => {
-                                this.initDragAndDrop();
-                                console.log('周数据切换后重新初始化拖拽');
-                            }, 200);
-                        }
+                        setTimeout(() => {
+                            this.initDragAndDrop();
+                            console.log('周数据切换后重新初始化拖拽');
+                        }, 200);
                     });
                 },
 
@@ -808,58 +2193,96 @@
 
                     // 确保切换周后重新初始化拖拽功能
                     this.$nextTick(() => {
-                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                        if (gridContainer) {
-                            gridContainer.innerHTML = this.renderFullWeekGrid();
-                            console.log('周数据切换后重新渲染网格');
+                        this.rerenderWeekView();
+                        console.log('周数据切换后重新渲染网格和时间条');
 
-                            setTimeout(() => {
-                                this.initDragAndDrop();
-                                console.log('周数据切换后重新初始化拖拽');
-                            }, 200);
-                        }
+                        setTimeout(() => {
+                            this.initDragAndDrop();
+                            console.log('周数据切换后重新初始化拖拽');
+                        }, 200);
                     });
                 },
                 
-                // 日程编辑
-                editScheduledEvent(date, timeSlot) {
-                    console.log('Editing event for:', date, timeSlot, 'Current view:', this.currentView);
-                    
-                    // 只在周视图中允许编辑
+                // v2.1 点击时间槽处理（选择+点击模式）
+                handleTimeSlotClick(date, timeSlot) {
+                    console.log('🎯 Time slot clicked:', date, timeSlot, 'Selected node:', this.selectedNode);
+
+                    // 只在周视图中允许操作
                     if (this.currentView !== 'week') {
-                        console.log('Edit event modal blocked - not in week view');
+                        console.log('Time slot click blocked - not in week view');
                         return;
                     }
-                    
-                    const event = this.getScheduledEvent(date, timeSlot);
-                    
-                    if (event) {
-                        // 编辑现有事件
-                        this.editingEvent = {
-                            id: event.id,
-                            activity_id: event.activity_id,
-                            activity_name: event.activity_name,
-                            event_date: date,
-                            time_slot: timeSlot,
-                            goal: event.goal || '',
-                            notes: event.notes || '',
-                            status: event.status
-                        };
+
+                    const existingEvent = this.getScheduledEvent(date, timeSlot);
+
+                    if (existingEvent) {
+                        // 编辑现有事件 - 使用旧的编辑模态框
+                        this.editExistingEvent(date, timeSlot, existingEvent);
+                    } else if (this.selectedNode.id) {
+                        // 有选中节点 - 使用新的创建模态框
+                        this.createEventWithSelectedNode(date, timeSlot);
                     } else {
-                        // 创建新事件（但需要先选择活动）
-                        this.editingEvent = {
-                            id: null,
-                            activity_id: null,
-                            activity_name: '',
-                            event_date: date,
-                            time_slot: timeSlot,
-                            goal: '',
-                            notes: '',
-                            status: 'planned'
-                        };
+                        // 没有选中节点 - 使用新的创建模态框
+                        this.createEventFromBlank(date, timeSlot);
                     }
-                    
+                },
+
+                // 编辑现有事件
+                editExistingEvent(date, timeSlot, event) {
+                    console.log('📝 Editing existing event:', event);
+                    this.editingEvent = {
+                        id: event.id,
+                        activity_id: event.activity_id,
+                        activity_name: event.activity_name,
+                        event_date: date,
+                        time_slot: timeSlot,
+                        // v2.1 新字段
+                        name: event.name || event.activity_name || '',
+                        domain_id: event.domain_id ? String(event.domain_id) : '',
+                        activity_type_id: event.activity_type_id ? String(event.activity_type_id) : '',
+                        schedule_id: event.schedule_id ? String(event.schedule_id) : '',
+                        // v1 兼容字段
+                        goal: event.goal || '',
+                        notes: event.notes || '',
+                        status: event.status || 'planned'
+                    };
                     this.showEditEventModal = true;
+                },
+
+                // 基于选中节点创建事件
+                createEventWithSelectedNode(date, timeSlot) {
+                    console.log('✨ Creating event with selected node:', this.selectedNode);
+                    this.newEvent = {
+                        name: this.selectedNode.name, // 🎯 自动填入选中节点名称
+                        event_date: date,
+                        time_slot: timeSlot,
+                        domain_id: this.selectedNode.type === 'domain' ? this.selectedNode.id : '',
+                        activity_type_id: this.selectedNode.type === 'type' ? this.selectedNode.id : '',
+                        schedule_id: '',
+                        notes: ''
+                    };
+                    this.showNewEventModal = true;
+                },
+
+                // 从空白创建事件
+                createEventFromBlank(date, timeSlot) {
+                    console.log('📄 Creating event from blank');
+                    this.newEvent = {
+                        name: '',
+                        event_date: date,
+                        time_slot: timeSlot,
+                        domain_id: '',
+                        activity_type_id: '',
+                        schedule_id: '',
+                        notes: ''
+                    };
+                    this.showNewEventModal = true;
+                },
+
+                // 保持向后兼容的旧方法
+                editScheduledEvent(date, timeSlot) {
+                    // 重定向到新的处理方法
+                    this.handleTimeSlotClick(date, timeSlot);
                 },
                 
                 async saveScheduledEvent() {
@@ -917,7 +2340,98 @@
                         }
                     }
                 },
-                
+
+                // v2.1 保存编辑的事件 (双轴矩阵)
+                async saveEditedEvent() {
+                    try {
+                        if (!this.editingEvent.name.trim()) {
+                            alert('请输入事件名称');
+                            return;
+                        }
+
+                        const eventData = {
+                            name: this.editingEvent.name.trim(),
+                            event_date: this.editingEvent.event_date,
+                            time_slot: parseInt(this.editingEvent.time_slot),
+                            domain_id: this.editingEvent.domain_id && this.editingEvent.domain_id !== '' ? parseInt(this.editingEvent.domain_id) : null,
+                            activity_type_id: this.editingEvent.activity_type_id && this.editingEvent.activity_type_id !== '' ? parseInt(this.editingEvent.activity_type_id) : null,
+                            schedule_id: this.editingEvent.schedule_id && this.editingEvent.schedule_id !== '' ? parseInt(this.editingEvent.schedule_id) : null,
+                            notes: this.editingEvent.notes || '',
+                            status: this.editingEvent.status || 'planned',
+                            // v1 兼容字段
+                            goal: this.editingEvent.goal || ''
+                        };
+
+                        console.log('📝 Updating event with data:', eventData);
+
+                        const response = await fetch(`/api/events/${this.editingEvent.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(eventData)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || 'Unknown error'}`);
+                        }
+
+                        console.log('✅ Event updated successfully');
+
+                        // 关闭模态框并重新加载数据
+                        this.forceCloseModal();
+                        await this.loadWeekSchedule();
+
+                        // 重新渲染网格
+                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                        if (gridContainer) {
+                            gridContainer.innerHTML = this.renderFullWeekGrid();
+                            setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                        }
+
+                    } catch (error) {
+                        console.error('❌ 更新事件失败:', error);
+                        alert('更新事件失败: ' + error.message);
+                    }
+                },
+
+                // v2.1 删除编辑的事件
+                async deleteEditedEvent() {
+                    if (!this.editingEvent.id) return;
+
+                    if (confirm('确定要删除这个事件吗？')) {
+                        try {
+                            console.log('🗑️ Deleting event:', this.editingEvent.id);
+
+                            const response = await fetch(`/api/events/${this.editingEvent.id}`, {
+                                method: 'DELETE'
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            console.log('✅ Event deleted successfully');
+
+                            // 关闭模态框并重新加载数据
+                            this.forceCloseModal();
+                            await this.loadWeekSchedule();
+
+                            // 重新渲染网格
+                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                            if (gridContainer) {
+                                gridContainer.innerHTML = this.renderFullWeekGrid();
+                                setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                            }
+
+                        } catch (error) {
+                            console.error('❌ 删除事件失败:', error);
+                            alert('删除事件失败: ' + error.message);
+                        }
+                    }
+                },
+
                 // 拖拽功能初始化
                 initDragAndDrop() {
                     console.log('Initializing drag and drop...', 'Current view:', this.currentView);
@@ -940,8 +2454,8 @@
                     
                     console.log('Cleaned up time slot sortable instances');
                     
-                    // 初始化活动池的拖拽（使用专门方法）
-                    this.initActivityPoolDragAndDrop();
+                    // v2.1: 不再需要活动池拖拽，改为选择+点击模式
+                    // this.initActivityPoolDragAndDrop();
                     
                     // 初始化时间槽的拖拽接收
                     const timeSlots = document.querySelectorAll('.time-slot');
@@ -968,10 +2482,14 @@
                                 tolerance: 'pointer', // 使用鼠标指针位置判断，而不是元素中心
                                 forceAutoScrollFallback: false, // 禁用自动滚动避免位置计算错误
                                 fallbackTolerance: 5, // 设置容差为5px，提高精度
-                                // 当从活动池拖拽到时间槽
+                                // 当拖拽到时间槽（包括移动现有事件）
                                 onAdd: function(evt) {
                                     console.log('Drop event triggered on slot:', evt.to);
                                     const activityId = evt.item.getAttribute('data-activity-id');
+                                    const eventId = evt.item.getAttribute('data-event-id');
+                                    const eventName = evt.item.getAttribute('data-event-name');
+                                    const domainId = evt.item.getAttribute('data-domain-id');
+                                    const activityTypeId = evt.item.getAttribute('data-activity-type-id');
                                     const date = evt.to.getAttribute('data-date');
                                     const timeSlot = parseInt(evt.to.getAttribute('data-time-slot'));
                                     const fromPool = evt.from.id === 'activity-pool';
@@ -1036,14 +2554,21 @@
                                         return;
                                     }
 
-                                    console.log('Drop details:', {
-                                        activityId, date, timeSlot,
-                                        fromPool, fromTimeSlot,
+                                    console.log('🎯 Drop details:', {
+                                        activityId, eventId, eventName, domainId, activityTypeId,
+                                        date, timeSlot, fromPool, fromTimeSlot,
                                         fromElement: evt.from.id || evt.from.className
                                     });
 
-                                    if (!activityId || !date || !timeSlot) {
-                                        console.error('Missing required drop data');
+                                    // v2.1兼容性：检查是否有有效的拖拽数据
+                                    const hasActivityId = activityId && activityId !== '';
+                                    const hasEventId = eventId && eventId !== '';
+                                    const hasEventName = eventName && eventName !== '';
+
+                                    if ((!hasActivityId && !hasEventId) || !date || !timeSlot) {
+                                        console.error('❌ Missing required drop data:', {
+                                            hasActivityId, hasEventId, hasEventName, date, timeSlot
+                                        });
                                         evt.item.remove();
                                         return;
                                     }
@@ -1055,13 +2580,22 @@
                                     if (fromTimeSlot) {
                                         const originalDate = evt.from.getAttribute('data-date');
                                         const originalTimeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
-                                        console.log('Moving from time slot:', originalDate, originalTimeSlot);
+                                        console.log('🔄 Moving event from time slot:', originalDate, originalTimeSlot);
 
-                                        // 处理移动事件（先删除原事件，再创建新事件）
-                                        self.handleMoveEvent(activityId, originalDate, originalTimeSlot, date, timeSlot);
+                                        if (hasEventId) {
+                                            // v2.1事件移动：使用事件ID
+                                            self.handleMoveEventV2(eventId, originalDate, originalTimeSlot, date, timeSlot);
+                                        } else {
+                                            // v1事件移动：使用活动ID
+                                            self.handleMoveEvent(activityId, originalDate, originalTimeSlot, date, timeSlot);
+                                        }
                                     } else {
-                                        // 从活动池拖拽，创建新事件
-                                        self.handleDrop(activityId, date, timeSlot);
+                                        // 从活动池拖拽，创建新事件（仅v1兼容）
+                                        if (hasActivityId) {
+                                            self.handleDrop(activityId, date, timeSlot);
+                                        } else {
+                                            console.warn('⚠️ 尝试从活动池拖拽v2.1事件，这不应该发生');
+                                        }
                                     }
                                 },
                                 // 当从时间槽拖拽元素出去时
@@ -1148,11 +2682,27 @@
                                     fallbackTolerance: 5, // 设置容差为5px，提高精度
                                     onAdd: function(evt) {
                                         console.log('Drop event triggered on slot:', evt.to);
+
+                                        // 检测拖拽源类型
                                         const activityId = evt.item.getAttribute('data-activity-id');
+                                        const nodeType = evt.item.getAttribute('data-node-type'); // domain 或 type
+                                        const nodeId = evt.item.getAttribute('data-node-id');
+                                        const nodeName = evt.item.getAttribute('data-node-name');
+
                                         const date = evt.to.getAttribute('data-date');
                                         const timeSlot = parseInt(evt.to.getAttribute('data-time-slot'));
                                         const fromPool = evt.from.id === 'activity-pool';
+                                        const fromSidebar = evt.from.id === 'domain-pool' || evt.from.id === 'type-pool';
                                         const fromTimeSlot = evt.from.classList.contains('time-slot');
+
+                                        console.log('🎯 拖拽源检测:', {
+                                            来源类型: fromSidebar ? '侧边栏' : (fromPool ? '活动池' : '时间槽'),
+                                            activityId,
+                                            nodeType,
+                                            nodeId,
+                                            nodeName,
+                                            目标: `${date} ${timeSlot}`
+                                        });
 
                                         // 详细的拖拽判断调试信息
                                         const targetRect = evt.to.getBoundingClientRect();
@@ -1219,16 +2769,34 @@
                                             fromElement: evt.from.id || evt.from.className
                                         });
 
-                                        if (!activityId || !date || !timeSlot) {
-                                            console.error('Missing required drop data');
-                                            evt.item.remove();
-                                            return;
+                                        // 验证必要数据
+                                        if (fromSidebar) {
+                                            // 侧边栏拖拽：需要nodeType, nodeId, nodeName
+                                            if (!nodeType || !nodeId || !nodeName || !date || !timeSlot) {
+                                                console.error('Missing required sidebar drop data:', {
+                                                    nodeType, nodeId, nodeName, date, timeSlot
+                                                });
+                                                evt.item.remove();
+                                                return;
+                                            }
+                                        } else {
+                                            // 活动池/时间槽拖拽：需要activityId
+                                            if (!activityId || !date || !timeSlot) {
+                                                console.error('Missing required drop data');
+                                                evt.item.remove();
+                                                return;
+                                            }
                                         }
 
                                         evt.item.remove();
 
-                                        // 如果是从其他时间槽移动过来的，需要先删除原有事件
-                                        if (fromTimeSlot) {
+                                        // 处理不同来源的拖拽
+                                        if (fromSidebar) {
+                                            // 从侧边栏拖拽，创建基于domain/type的事件
+                                            console.log('🎯 Processing sidebar drop');
+                                            self.handleSidebarDrop(nodeType, nodeId, nodeName, date, timeSlot);
+                                        } else if (fromTimeSlot) {
+                                            // 从其他时间槽移动过来的，需要先删除原有事件
                                             const originalDate = evt.from.getAttribute('data-date');
                                             const originalTimeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
                                             console.log('Moving from time slot:', originalDate, originalTimeSlot);
@@ -1362,6 +2930,95 @@
                     }
                 },
 
+                // v2.1 新增：处理v2.1事件的移动（基于事件ID）
+                async handleMoveEventV2(eventId, fromDate, fromTimeSlot, toDate, toTimeSlot) {
+                    try {
+                        console.log('🔄 === MOVE EVENT V2 HANDLER START ===');
+                        console.log('Moving v2.1 event:', {
+                            eventId,
+                            from: { date: fromDate, timeSlot: fromTimeSlot },
+                            to: { date: toDate, timeSlot: toTimeSlot }
+                        });
+
+                        // 检查目标时间槽是否已被占用
+                        const targetEvent = this.getScheduledEvent(toDate, toTimeSlot);
+                        if (targetEvent) {
+                            alert('目标时间槽已有安排，无法移动');
+                            await this.loadWeekSchedule();
+                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                            if (gridContainer) {
+                                gridContainer.innerHTML = this.renderFullWeekGrid();
+                                setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                            }
+                            return;
+                        }
+
+                        // 找到原事件
+                        const originalEvent = this.getScheduledEvent(fromDate, fromTimeSlot);
+                        if (!originalEvent) {
+                            console.error('❌ Original event not found');
+                            alert('找不到原始事件');
+                            return;
+                        }
+
+                        console.log('✅ Original event found:', originalEvent);
+
+                        // 更新事件的日期和时间槽
+                        const updateData = {
+                            event_date: toDate,
+                            time_slot: parseInt(toTimeSlot),
+                            name: originalEvent.name || originalEvent.activity_name || '',
+                            domain_id: originalEvent.domain_id || null,
+                            activity_type_id: originalEvent.activity_type_id || null,
+                            schedule_id: originalEvent.schedule_id || null,
+                            notes: originalEvent.notes || '',
+                            status: originalEvent.status || 'planned'
+                        };
+
+                        console.log('🎯 Updating event with data:', updateData);
+
+                        const response = await fetch(`/api/events/${eventId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(updateData)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || 'Unknown error'}`);
+                        }
+
+                        console.log('✅ Event moved successfully');
+
+                        // 刷新数据和重新渲染
+                        await this.loadWeekSchedule();
+                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                        if (gridContainer) {
+                            gridContainer.innerHTML = this.renderFullWeekGrid();
+                            console.log('Week grid re-rendered after v2.1 move');
+
+                            setTimeout(() => {
+                                this.initTimeSlotsDragAndDrop();
+                            }, 100);
+                        }
+
+                        console.log('🔄 === MOVE EVENT V2 HANDLER SUCCESS ===');
+
+                    } catch (error) {
+                        console.error('🔄 === MOVE EVENT V2 HANDLER ERROR ===');
+                        console.error('❌ 移动v2.1事件失败:', error);
+                        alert('移动事件失败: ' + error.message);
+
+                        // 重新渲染网格以恢复原状
+                        await this.loadWeekSchedule();
+                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                        if (gridContainer) {
+                            gridContainer.innerHTML = this.renderFullWeekGrid();
+                            setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                        }
+                    }
+                },
+
                 // 新增：通过事件ID删除事件
                 async deleteEventById(eventId) {
                     try {
@@ -1407,6 +3064,94 @@
                     } catch (error) {
                         console.error('按日期时间槽删除事件失败:', error);
                         alert('删除事件失败: ' + error.message);
+                    }
+                },
+
+                // v2.1 新增：处理从侧边栏拖拽创建事件
+                async handleSidebarDrop(nodeType, nodeId, nodeName, date, timeSlot) {
+                    try {
+                        console.log('🎯 === SIDEBAR DROP HANDLER START ===');
+                        console.log('处理侧边栏拖拽:', { nodeType, nodeId, nodeName, date, timeSlot });
+
+                        // 验证输入参数
+                        if (!nodeType || !nodeId || !nodeName || !date || !timeSlot) {
+                            console.error('Invalid sidebar drop parameters:', { nodeType, nodeId, nodeName, date, timeSlot });
+                            alert('侧边栏拖拽参数错误，请重试');
+                            return;
+                        }
+
+                        // 检查是否已有事件
+                        const existing = this.getScheduledEvent(date, timeSlot);
+                        console.log('现有事件检查:', existing);
+                        if (existing) {
+                            alert('该时间槽已有安排，请选择其他时间或先删除现有安排');
+                            return;
+                        }
+
+                        // 弹出目标输入框，让用户为这个domain/type设置具体目标
+                        const goal = prompt(
+                            `为「${nodeName}」设置具体目标：\n\n请输入你在 ${date} ${this.getTimeSlotName(timeSlot)} 要完成的具体任务或目标`,
+                            nodeName // 默认值为节点名称
+                        );
+
+                        if (goal === null) {
+                            console.log('用户取消了目标设置');
+                            return;
+                        }
+
+                        if (!goal.trim()) {
+                            alert('请输入具体的目标或任务');
+                            return;
+                        }
+
+                        // 准备事件数据
+                        let eventData = {
+                            event_date: date,
+                            time_slot: timeSlot,
+                            goal: goal.trim(),
+                            status: 'scheduled',
+                            notes: `来源：${nodeType === 'domain' ? '领域' : '类型'} - ${nodeName}`
+                        };
+
+                        // 根据nodeType设置相应的字段
+                        if (nodeType === 'domain') {
+                            eventData.domain_id = parseInt(nodeId);
+                        } else if (nodeType === 'type') {
+                            eventData.activity_type_id = parseInt(nodeId);
+                        }
+
+                        console.log('准备创建事件数据:', eventData);
+
+                        // 调用API创建事件
+                        const response = await fetch('/api/scheduled-events/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(eventData)
+                        });
+
+                        console.log('API响应状态:', response.status);
+
+                        if (!response.ok) {
+                            const error = await response.text();
+                            console.error('创建事件失败:', error);
+                            throw new Error(`创建事件失败 (${response.status}): ${error}`);
+                        }
+
+                        const newEvent = await response.json();
+                        console.log('✅ 事件创建成功:', newEvent);
+
+                        // 刷新周视图数据
+                        await this.loadWeekSchedule();
+                        console.log('🔄 周视图数据已刷新');
+
+                        // 显示成功消息
+                        console.log(`✨ 成功为「${nodeName}」创建了计划：${goal}`);
+
+                    } catch (error) {
+                        console.error('❌ 侧边栏拖拽创建事件失败:', error);
+                        alert('创建事件失败: ' + error.message);
                     }
                 },
 
@@ -1497,8 +3242,72 @@
                         alert('创建日程失败: ' + error.message);
                     }
                 },
-                
-                // 汇总视图渲染
+
+                // v2.0 渲染方法
+                renderDomainTree() {
+                    if (!this.domains.length) return '<p class="text-muted">暂无领域，<a href="#" @click="showNewDomainModal = true">点击创建</a></p>';
+
+                    const renderNode = (domain, level = 0) => {
+                        const children = this.domains.filter(d => d.parent_id === domain.id);
+                        const scheduleCount = this.getDomainScheduleCount(domain.id);
+                        let html = `
+                            <div class="mb-2" style="margin-left: ${level * 20}px;">
+                                <div class="d-flex justify-content-between align-items-center border-start border-primary border-3 ps-2 py-1">
+                                    <div>
+                                        <strong>${domain.name}</strong>
+                                        ${scheduleCount > 0 ? `<span class="badge bg-info ms-2">${scheduleCount} 日程</span>` : ''}
+                                        ${domain.description ? `<br><small class="text-muted">${domain.description}</small>` : ''}
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-info me-1" @click="manageSchedules(${domain.id})" title="管理日程">📅</button>
+                                        <button class="btn btn-sm btn-outline-primary me-1" @click="editDomain(${domain.id})">编辑</button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="deleteDomain(${domain.id})">删除</button>
+                                    </div>
+                                </div>
+                        `;
+
+                        children.forEach(child => {
+                            html += renderNode(child, level + 1);
+                        });
+
+                        html += '</div>';
+                        return html;
+                    };
+
+                    return this.domains.filter(d => !d.parent_id).map(domain => renderNode(domain)).join('');
+                },
+
+                renderActivityTypeTree() {
+                    if (!this.activityTypes.length) return '<p class="text-muted">暂无活动类型，<a href="#" @click="showNewActivityTypeModal = true">点击创建</a></p>';
+
+                    const renderNode = (type, level = 0) => {
+                        const children = this.activityTypes.filter(t => t.parent_id === type.id);
+                        let html = `
+                            <div class="mb-2" style="margin-left: ${level * 20}px;">
+                                <div class="d-flex justify-content-between align-items-center border-start border-success border-3 ps-2 py-1">
+                                    <div>
+                                        <strong>${type.name}</strong>
+                                        ${type.description ? `<br><small class="text-muted">${type.description}</small>` : ''}
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-success me-1" @click="editActivityType(${type.id})">编辑</button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="deleteActivityType(${type.id})">删除</button>
+                                    </div>
+                                </div>
+                        `;
+
+                        children.forEach(child => {
+                            html += renderNode(child, level + 1);
+                        });
+
+                        html += '</div>';
+                        return html;
+                    };
+
+                    return this.activityTypes.filter(t => !t.parent_id).map(type => renderNode(type)).join('');
+                },
+
+                // 汇总视图渲染 (v1.0保留)
                 renderActivityTree() {
                     if (!this.activities.length) return '<p class="text-muted">暂无活动</p>';
                     
@@ -1632,6 +3441,245 @@
                     return goalCount > 0 ? html : '<small class="text-muted">暂无目标记录</small>';
                 },
                 
+                // 渲染Schedule时间条
+                renderScheduleTimeline() {
+                    console.log('🔍 renderScheduleTimeline called');
+                    console.log('weekDates:', this.weekDates);
+                    console.log('weeklySchedules:', this.weeklySchedules);
+
+                    if (!this.weekDates || !this.weekDates.length) {
+                        console.log('⚠️ weekDates not ready, showing loading message');
+                        return '<div class="schedule-timeline-label">日程</div><div class="text-muted p-3">加载中...</div>';
+                    }
+
+                    let html = '';
+
+                    // 标题列
+                    html += '<div class="schedule-timeline-label">日程</div>';
+
+                    // 为每一天创建时间条容器
+                    this.weekDates.forEach((dateStr, dayIndex) => {
+                        html += `<div class="schedule-timeline-day" data-date="${dateStr}">`;
+
+                        // 计算当天的Schedule时间条
+                        const daySchedules = this.getSchedulesForDay(new Date(dateStr), dayIndex);
+                        daySchedules.forEach((schedule, scheduleIndex) => {
+                            const colorClass = `schedule-color-${schedule.id % 8}`;
+                            const isSpanningSchedule = this.isScheduleSpanningMultipleDays(schedule);
+                            const spanInfo = isSpanningSchedule ? this.getScheduleSpanInfo(schedule, new Date(dateStr)) : null;
+
+                            html += `
+                                <div class="schedule-bar ${colorClass}"
+                                     data-schedule-id="${schedule.id}"
+                                     title="${this.getScheduleTooltipText(schedule, spanInfo)}"
+                                     @click="editScheduleFromTimeline(${schedule.id})"
+                                     @mouseenter="$event.target.style.transform = 'scale(1.02)'"
+                                     @mouseleave="$event.target.style.transform = 'scale(1)'">
+                                    ${this.getScheduleDisplayText(schedule, spanInfo)}
+                                </div>
+                            `;
+                        });
+
+                        html += '</div>';
+                    });
+
+                    return html;
+                },
+
+                // 获取指定日期的Schedule数据
+                getSchedulesForDay(date, dayIndex) {
+                    const dateStr = date.toISOString().split('T')[0];
+                    const daySchedules = [];
+
+                    this.weeklySchedules.forEach(schedule => {
+                        const startDate = schedule.start_date ? new Date(schedule.start_date) : null;
+                        const endDate = schedule.deadline ? new Date(schedule.deadline) : null;
+
+                        // 检查Schedule是否跨越这一天
+                        if (this.scheduleSpansDay(schedule, date)) {
+                            daySchedules.push({
+                                ...schedule,
+                                sortKey: endDate ? endDate.getTime() : (startDate ? startDate.getTime() : 0)
+                            });
+                        }
+                    });
+
+                    // 按截止时间排序，实现垂直堆叠
+                    daySchedules.sort((a, b) => a.sortKey - b.sortKey);
+
+                    return daySchedules;
+                },
+
+                // 检查Schedule是否跨越指定日期
+                scheduleSpansDay(schedule, date) {
+                    const targetDate = new Date(date);
+                    targetDate.setHours(0, 0, 0, 0);
+
+                    const startDate = schedule.start_date ? new Date(schedule.start_date) : null;
+                    const endDate = schedule.deadline ? new Date(schedule.deadline) : null;
+
+                    if (startDate) startDate.setHours(0, 0, 0, 0);
+                    if (endDate) endDate.setHours(0, 0, 0, 0);
+
+                    // 如果只有deadline，检查是否在当天或之前
+                    if (!startDate && endDate) {
+                        return targetDate <= endDate;
+                    }
+
+                    // 如果只有start_date，检查是否在当天或之后
+                    if (startDate && !endDate) {
+                        return targetDate >= startDate;
+                    }
+
+                    // 如果都有，检查是否在范围内
+                    if (startDate && endDate) {
+                        return targetDate >= startDate && targetDate <= endDate;
+                    }
+
+                    return false;
+                },
+
+                // 检查Schedule是否跨越多天
+                isScheduleSpanningMultipleDays(schedule) {
+                    const startDate = schedule.start_date ? new Date(schedule.start_date) : null;
+                    const endDate = schedule.deadline ? new Date(schedule.deadline) : null;
+
+                    if (!startDate || !endDate) return false;
+
+                    const diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                    return diffDays > 0;
+                },
+
+                // 获取Schedule在特定日期的跨越信息
+                getScheduleSpanInfo(schedule, currentDate) {
+                    const startDate = schedule.start_date ? new Date(schedule.start_date) : null;
+                    const endDate = schedule.deadline ? new Date(schedule.deadline) : null;
+                    const weekStart = new Date(this.currentWeekStart);
+                    const weekEnd = new Date(this.currentWeekStart);
+                    weekEnd.setDate(weekEnd.getDate() + 6);
+
+                    if (!startDate || !endDate) return null;
+
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(0, 0, 0, 0);
+                    currentDate.setHours(0, 0, 0, 0);
+                    weekStart.setHours(0, 0, 0, 0);
+                    weekEnd.setHours(0, 0, 0, 0);
+
+                    // 修正：只有真正的起始/结束点才显示三角形标识
+                    const isActualFirstDay = currentDate.getTime() === startDate.getTime();
+                    const isActualLastDay = currentDate.getTime() === endDate.getTime();
+                    const isFirstDayInWeek = currentDate.getTime() === Math.max(startDate.getTime(), weekStart.getTime()) && isActualFirstDay;
+                    const isLastDayInWeek = currentDate.getTime() === Math.min(endDate.getTime(), weekEnd.getTime()) && isActualLastDay;
+                    const isMiddleDay = currentDate > startDate && currentDate < endDate;
+
+                    return {
+                        isFirstDay: isFirstDayInWeek,
+                        isLastDay: isLastDayInWeek,
+                        isMiddleDay: isMiddleDay,
+                        totalDays: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1
+                    };
+                },
+
+                // 获取Schedule显示文本
+                getScheduleDisplayText(schedule, spanInfo) {
+                    if (!spanInfo) {
+                        return schedule.name;
+                    }
+
+                    if (spanInfo.isFirstDay) {
+                        return `◀ ${schedule.name}`;
+                    } else if (spanInfo.isLastDay) {
+                        return `${schedule.name} ▶`;
+                    } else if (spanInfo.isMiddleDay) {
+                        return `── ${schedule.name} ──`;
+                    }
+
+                    return schedule.name;
+                },
+
+                // 获取Schedule的详细tooltip文本
+                getScheduleTooltipText(schedule, spanInfo) {
+                    let tooltip = `${schedule.name}\n`;
+
+                    if (schedule.start_date) {
+                        tooltip += `开始: ${this.formatFullDate(schedule.start_date)}\n`;
+                    }
+
+                    if (schedule.deadline) {
+                        tooltip += `截止: ${this.formatFullDate(schedule.deadline)}\n`;
+                    }
+
+                    if (schedule.description) {
+                        tooltip += `说明: ${schedule.description}\n`;
+                    }
+
+                    if (spanInfo) {
+                        if (spanInfo.isFirstDay) {
+                            tooltip += `状态: 跨天日程开始`;
+                        } else if (spanInfo.isLastDay) {
+                            tooltip += `状态: 跨天日程结束`;
+                        } else if (spanInfo.isMiddleDay) {
+                            tooltip += `状态: 跨天日程进行中`;
+                        }
+                    } else {
+                        tooltip += `状态: 单日日程`;
+                    }
+
+                    tooltip += `\n点击编辑`;
+                    return tooltip;
+                },
+
+                // 格式化完整日期显示
+                formatFullDate(dateStr) {
+                    if (!dateStr) return '无';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                },
+
+                // 从时间条编辑Schedule
+                async editScheduleFromTimeline(scheduleId) {
+                    try {
+                        console.log('Editing schedule from timeline:', scheduleId);
+                        const response = await fetch(`/api/schedules/${scheduleId}`);
+                        if (!response.ok) throw new Error('Failed to load schedule');
+
+                        const schedule = await response.json();
+                        this.editSchedule(schedule);
+                    } catch (error) {
+                        console.error('Error editing schedule from timeline:', error);
+                        alert('无法编辑日程: ' + error.message);
+                    }
+                },
+
+                // 格式化日期显示
+                formatDate(dateStr) {
+                    if (!dateStr) return '无';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                },
+
+                // 重新渲染周视图（包括网格和时间条）
+                rerenderWeekView() {
+                    const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                    const timelineContainer = document.querySelector('[x-html="renderScheduleTimeline()"]');
+
+                    if (gridContainer) {
+                        gridContainer.innerHTML = this.renderFullWeekGrid();
+                    }
+
+                    if (timelineContainer) {
+                        timelineContainer.innerHTML = this.renderScheduleTimeline();
+                    }
+                },
+
                 // 完整周视图网格渲染（包含标题行和所有时间槽）
                 renderFullWeekGrid() {
                     if (!this.timeSlots.length || !this.weekDates.length) {
@@ -1680,9 +3728,12 @@
                             if (event) {
                                 html += `
                                     <div class="scheduled-event activity-card"
-                                         data-activity-id="${event.activity_id}"
-                                         data-event-id="${event.id}">
-                                        <div class="fw-bold mb-1" style="font-size: 0.85rem; line-height: 1.2;">${event.activity_name || ''}</div>
+                                         data-activity-id="${event.activity_id || ''}"
+                                         data-event-id="${event.id}"
+                                         data-event-name="${event.name || event.activity_name || ''}"
+                                         data-domain-id="${event.domain_id || ''}"
+                                         data-activity-type-id="${event.activity_type_id || ''}"
+                                        <div class="fw-bold mb-1" style="font-size: 0.85rem; line-height: 1.2;">${event.name || event.activity_name || ''}</div>
                                         ${event.goal ? `<div class="mb-1" style="font-size: 0.75rem; color: #666; line-height: 1.3;">${event.goal}</div>` : ''}
                                         ${event.notes ? `<div style="font-size: 0.7rem; color: #888; line-height: 1.2;">备注: ${event.notes}</div>` : ''}
                                     </div>
@@ -1919,6 +3970,310 @@
                     console.log('Activity pool sortable initialized successfully');
                 },
 
+                // =============================================================================
+                // 侧边栏功能 v2.1 (交互革命)
+                // =============================================================================
+
+                // 设置侧边栏模式
+                setSidebarMode(mode) {
+                    console.log('🔄 Setting sidebar mode to:', mode);
+                    this.sidebarMode = mode;
+
+                    // 加载相应的数据
+                    if (mode === 'domain') {
+                        this.loadDomainTree();
+                    } else if (mode === 'type') {
+                        this.loadTypeTree();
+                    }
+
+                    // 清除当前选中节点（切换模式时）
+                    if (this.selectedNode.id && this.selectedNode.type !== mode) {
+                        console.log('🔄 Clearing selected node due to mode switch');
+                        this.clearSelectedNode();
+                    }
+                },
+
+                // 加载Domain层级树数据
+                async loadDomainTree() {
+                    try {
+                        console.log('📂 Loading domain tree...');
+                        const response = await fetch('/api/domains/tree');
+                        if (!response.ok) throw new Error('Failed to load domain tree');
+
+                        this.domainTree = await response.json();
+                        console.log('✅ Domain tree loaded:', this.domainTree.length, 'root nodes');
+
+                        // 等待DOM更新后重新初始化拖拽
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                console.log('🔄 Re-initializing drag after domain tree load...');
+                                // v2.1 不再需要拖拽初始化
+                            }, 50);
+                        });
+                    } catch (error) {
+                        console.error('❌ Error loading domain tree:', error);
+                        this.domainTree = [];
+                    }
+                },
+
+                // 加载ActivityType层级树数据
+                async loadTypeTree() {
+                    try {
+                        console.log('🏷️ Loading activity type tree...');
+                        const response = await fetch('/api/activity-types/tree');
+                        if (!response.ok) throw new Error('Failed to load activity type tree');
+
+                        this.typeTree = await response.json();
+                        console.log('✅ Activity type tree loaded:', this.typeTree.length, 'root nodes');
+
+                        // 等待DOM更新后重新初始化拖拽
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                console.log('🔄 Re-initializing drag after type tree load...');
+                                // v2.1 不再需要拖拽初始化
+                            }, 50);
+                        });
+                    } catch (error) {
+                        console.error('❌ Error loading activity type tree:', error);
+                        this.typeTree = [];
+                    }
+                },
+
+                // 渲染选择面板Domain树（v2.1专用，点击选择）
+                renderSelectionDomainTree() {
+                    if (!this.domainTree.length) {
+                        return '<p class="text-muted">暂无领域数据</p>';
+                    }
+                    return this.renderSelectionTreeNodes(this.domainTree, 'domain');
+                },
+
+                // 渲染选择面板ActivityType树（v2.1专用，点击选择）
+                renderSelectionTypeTree() {
+                    if (!this.typeTree.length) {
+                        return '<p class="text-muted">暂无类型数据</p>';
+                    }
+                    return this.renderSelectionTreeNodes(this.typeTree, 'type');
+                },
+
+                // 渲染树节点的递归方法
+                renderTreeNodes(nodes, nodeType) {
+                    return nodes.map(node => {
+                        const hasChildren = node.children && node.children.length > 0;
+                        const isCollapsed = this.collapsedNodes.has(`${nodeType}-${node.id}`);
+                        const toggleIcon = hasChildren ? (isCollapsed ? '▶' : '▼') : '';
+                        const nodeKey = `${nodeType}-${node.id}`;
+
+                        let html = `
+                            <div class="tree-node">
+                                <div class="tree-node-content draggable"
+                                     data-node-type="${nodeType}"
+                                     data-node-id="${node.id}"
+                                     data-node-name="${node.name}">
+                                    ${hasChildren ?
+                                        `<button class="tree-toggle ${isCollapsed ? '' : 'expanded'}"
+                                                onclick="window.laeAppInstance.toggleNode('${nodeKey}')">
+                                            ${toggleIcon}
+                                        </button>` :
+                                        `<div style="width: 16px; margin-right: 0.5rem;"></div>`
+                                    }
+                                    <div style="flex: 1;">
+                                        <div class="tree-node-label">${node.name}</div>
+                                        ${node.description ?
+                                            `<div class="tree-node-description">${node.description}</div>` :
+                                            ''
+                                        }
+                                    </div>
+                                </div>
+                        `;
+
+                        if (hasChildren && !isCollapsed) {
+                            html += `
+                                <div class="tree-children">
+                                    ${this.renderTreeNodes(node.children, nodeType)}
+                                </div>
+                            `;
+                        }
+
+                        html += '</div>';
+                        return html;
+                    }).join('');
+                },
+
+                // 切换节点展开/折叠状态
+                toggleNode(nodeKey) {
+                    console.log('🔄 Toggling node:', nodeKey);
+
+                    if (this.collapsedNodes.has(nodeKey)) {
+                        this.collapsedNodes.delete(nodeKey);
+                        console.log('📂 Expanded node:', nodeKey);
+                    } else {
+                        this.collapsedNodes.add(nodeKey);
+                        console.log('📁 Collapsed node:', nodeKey);
+                    }
+
+                    // 触发重新渲染
+                    this.refreshTrigger++;
+                },
+
+                // 渲染选择树节点的递归方法（可点击选择）
+                renderSelectionTreeNodes(nodes, nodeType) {
+                    return nodes.map(node => {
+                        const hasChildren = node.children && node.children.length > 0;
+                        const isCollapsed = this.collapsedNodes.has(`${nodeType}-${node.id}`);
+                        const toggleIcon = hasChildren ? (isCollapsed ? '▶' : '▼') : '';
+                        const nodeKey = `${nodeType}-${node.id}`;
+                        const isSelected = this.selectedNode.id === node.id && this.selectedNode.type === nodeType;
+
+                        let html = `
+                            <div class="tree-node">
+                                <div class="tree-node-content selectable ${isSelected ? 'selected' : ''}"
+                                     onclick="window.laeAppInstance.selectNode('${nodeType}', ${node.id}, '${node.name.replace(/'/g, "\\'")}', '${(node.description || '').replace(/'/g, "\\'")}')">
+                                    ${hasChildren ?
+                                        `<button class="tree-toggle ${isCollapsed ? '' : 'expanded'}"
+                                                onclick="event.stopPropagation(); window.laeAppInstance.toggleNode('${nodeKey}')">
+                                            ${toggleIcon}
+                                        </button>` :
+                                        `<div style="width: 16px; margin-right: 0.5rem;"></div>`
+                                    }
+                                    <div style="flex: 1;">
+                                        <div class="tree-node-label">
+                                            ${isSelected ? '<strong>✓ ' + node.name + '</strong>' : node.name}
+                                        </div>
+                                        ${node.description ?
+                                            `<div class="tree-node-description">${node.description}</div>` :
+                                            ''
+                                        }
+                                    </div>
+                                </div>
+                        `;
+
+                        if (hasChildren && !isCollapsed) {
+                            html += `
+                                <div class="tree-children">
+                                    ${this.renderSelectionTreeNodes(node.children, nodeType)}
+                                </div>
+                            `;
+                        }
+
+                        html += '</div>';
+                        return html;
+                    }).join('');
+                },
+
+                // 选中节点
+                selectNode(nodeType, nodeId, nodeName, nodeDescription) {
+                    console.log('🎯 Selecting node:', { nodeType, nodeId, nodeName });
+                    this.selectedNode = {
+                        id: nodeId,
+                        name: nodeName,
+                        type: nodeType,
+                        description: nodeDescription || ''
+                    };
+                    // 触发重新渲染以更新选中状态
+                    this.refreshTrigger++;
+                },
+
+                // 清除选中节点
+                clearSelectedNode() {
+                    console.log('🔄 Clearing selected node');
+                    this.selectedNode = {
+                        id: null,
+                        name: '',
+                        type: '',
+                        description: ''
+                    };
+                    // 触发重新渲染
+                    this.refreshTrigger++;
+                },
+
+                // 初始化侧边栏拖拽功能
+                initSidebarDragAndDrop() {
+                    console.log('🎯 Initializing sidebar drag and drop...');
+
+                    // 只在周视图中初始化侧边栏拖拽功能
+                    if (this.currentView !== 'week') {
+                        console.log('Sidebar drag and drop skipped - not in week view');
+                        return;
+                    }
+
+                    const domainPool = document.getElementById('domain-pool');
+                    const typePool = document.getElementById('type-pool');
+
+                    console.log('🎯 Sidebar elements found:', {
+                        domainPool: !!domainPool,
+                        typePool: !!typePool,
+                        domainPoolVisible: domainPool ? !domainPool.hidden : false,
+                        typePoolVisible: typePool ? !typePool.hidden : false
+                    });
+
+                    if (domainPool) {
+                        console.log('🎯 Initializing domain pool drag...');
+                        this.initPoolDragAndDrop(domainPool, 'domain');
+                    } else {
+                        console.warn('⚠️ Domain pool not found');
+                    }
+
+                    if (typePool) {
+                        console.log('🎯 Initializing type pool drag...');
+                        this.initPoolDragAndDrop(typePool, 'type');
+                    } else {
+                        console.warn('⚠️ Type pool not found');
+                    }
+                },
+
+                // 为特定池初始化拖拽功能
+                initPoolDragAndDrop(poolElement, poolType) {
+                    if (poolElement.sortableInstance) {
+                        poolElement.sortableInstance.destroy();
+                    }
+
+                    const self = this;
+
+                    // 添加测试点击事件监听器
+                    poolElement.addEventListener('mousedown', function(e) {
+                        console.log('🖱️ Mouse down on pool element:', {
+                            target: e.target,
+                            className: e.target.className,
+                            tagName: e.target.tagName,
+                            closest_draggable: e.target.closest('.tree-node-content')
+                        });
+                    });
+
+                    poolElement.sortableInstance = Sortable.create(poolElement, {
+                        group: {
+                            name: 'activities',
+                            pull: 'clone'
+                        },
+                        sort: false,
+                        // 明确指定只拖拽.tree-node-content元素
+                        draggable: '.tree-node-content',
+                        animation: 150,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        onStart: function(evt) {
+                            console.log('🎯 Starting drag from', poolType, 'pool');
+                            console.log('🎯 Dragging item:', {
+                                nodeType: evt.item.getAttribute('data-node-type'),
+                                nodeId: evt.item.getAttribute('data-node-id'),
+                                nodeName: evt.item.getAttribute('data-node-name'),
+                                element: evt.item,
+                                elementClass: evt.item.className,
+                                parentElement: evt.item.parentElement
+                            });
+                        },
+                        onEnd: function(evt) {
+                            console.log('🎯 Drag ended from', poolType, 'pool');
+                            // 清理克隆元素
+                            if (evt.clone && evt.clone !== evt.item) {
+                                evt.clone.remove();
+                            }
+                        }
+                    });
+
+                    console.log('✅', poolType, 'pool drag initialized');
+                },
+
+                // =============================================================================
                 // 工具方法
                 getCurrentDateString() {
                     return this.currentDate.toLocaleDateString('zh-CN', {
@@ -1982,6 +4337,7 @@
                     await this.generateAvailableMonths();
                     await this.loadSummaryStatistics();
                     await this.loadActivityStatistics();
+                    await this.loadDomainScheduleCounts();  // 加载Domain的Schedule数量
                 },
                 
                 generateAvailableMonths() {
@@ -2087,6 +4443,9 @@
                                 is_today: day.is_today
                             };
                         });
+
+                        // 保存Schedule数据供渲染使用
+                        this.monthSchedules = data.schedules || [];
                         
                         let html = '';
                         let currentDate = new Date(startDate);
@@ -2109,10 +4468,10 @@
                                     cellClass += ' bg-warning bg-opacity-25 fw-bold';
                                 }
                                 
-                                html += `<div class="${cellClass}" style="min-height: 100px;">`;
+                                html += `<div class="${cellClass}" style="min-height: 100px; position: relative;">`;
                                 html += `<div class="fw-bold">${currentDate.getDate()}</div>`;
-                                
-                                // 显示事件数量
+
+                                // 显示事件数量（底层）
                                 if (dayData.event_count > 0) {
                                     html += `
                                         <div class="mt-2">
@@ -2120,7 +4479,25 @@
                                         </div>
                                     `;
                                 }
-                                
+
+                                // 渲染Schedule时间条（顶层，半透明）
+                                const dayScheduleBars = this.getMonthScheduleBarsForDay(currentDate);
+                                if (dayScheduleBars.length > 0) {
+                                    html += '<div class="schedule-bars-container">';
+                                    dayScheduleBars.forEach(bar => {
+                                        html += `
+                                            <div class="month-schedule-bar schedule-color-${bar.id % 8}"
+                                                 data-schedule-id="${bar.id}"
+                                                 title="${bar.name}${bar.tooltip}"
+                                                 style="opacity: 0.8;"
+                                                 onclick="window.laeAppInstance.editScheduleFromTimeline(${bar.id})">
+                                                ${bar.displayText}
+                                            </div>
+                                        `;
+                                    });
+                                    html += '</div>';
+                                }
+
                                 html += '</div>';
                                 
                                 // 移动到下一天
@@ -2143,7 +4520,82 @@
                         }
                     }
                 },
-                
+
+                // 获取指定日期的月视图Schedule时间条
+                getMonthScheduleBarsForDay(date) {
+                    if (!this.monthSchedules) return [];
+
+                    const targetDate = new Date(date);
+                    targetDate.setHours(0, 0, 0, 0);
+                    const bars = [];
+
+                    this.monthSchedules.forEach(schedule => {
+                        if (this.scheduleSpansDay(schedule, targetDate)) {
+                            const spanInfo = this.getMonthScheduleSpanInfo(schedule, targetDate);
+                            bars.push({
+                                id: schedule.id,
+                                name: schedule.name,
+                                displayText: this.getMonthScheduleDisplayText(schedule, spanInfo),
+                                tooltip: `\n开始: ${this.formatFullDate(schedule.start_date)}\n截止: ${this.formatFullDate(schedule.deadline)}`
+                            });
+                        }
+                    });
+
+                    // 按截止时间排序
+                    bars.sort((a, b) => {
+                        const aDeadline = this.monthSchedules.find(s => s.id === a.id)?.deadline;
+                        const bDeadline = this.monthSchedules.find(s => s.id === b.id)?.deadline;
+                        if (!aDeadline && !bDeadline) return 0;
+                        if (!aDeadline) return 1;
+                        if (!bDeadline) return -1;
+                        return new Date(aDeadline) - new Date(bDeadline);
+                    });
+
+                    return bars;
+                },
+
+                // 获取月视图Schedule跨越信息
+                getMonthScheduleSpanInfo(schedule, currentDate) {
+                    const startDate = schedule.start_date ? new Date(schedule.start_date) : null;
+                    const endDate = schedule.deadline ? new Date(schedule.deadline) : null;
+
+                    if (!startDate || !endDate) return null;
+
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(0, 0, 0, 0);
+                    currentDate.setHours(0, 0, 0, 0);
+
+                    const isFirstDay = currentDate.getTime() === startDate.getTime();
+                    const isLastDay = currentDate.getTime() === endDate.getTime();
+                    const isMiddleDay = currentDate > startDate && currentDate < endDate;
+
+                    return {
+                        isFirstDay,
+                        isLastDay,
+                        isMiddleDay,
+                        totalDays: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1
+                    };
+                },
+
+                // 获取月视图Schedule显示文本
+                getMonthScheduleDisplayText(schedule, spanInfo) {
+                    if (!spanInfo) {
+                        return schedule.name.length > 8 ? schedule.name.substring(0, 8) + '...' : schedule.name;
+                    }
+
+                    const shortName = schedule.name.length > 6 ? schedule.name.substring(0, 6) + '...' : schedule.name;
+
+                    if (spanInfo.isFirstDay) {
+                        return `◀${shortName}`;
+                    } else if (spanInfo.isLastDay) {
+                        return `${shortName}▶`;
+                    } else if (spanInfo.isMiddleDay) {
+                        return `──${shortName}──`;
+                    }
+
+                    return shortName;
+                },
+
                 // 获取时间槽名称的辅助方法
                 getTimeSlotName(timeSlotValue) {
                     const slot = this.timeSlots.find(s => s.value === timeSlotValue);

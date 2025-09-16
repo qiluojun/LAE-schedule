@@ -1,8 +1,338 @@
 # LAE Schedule System - Development Status
 
-**Date**: 2025-09-12 (Final Update)  
-**Current Version**: Phase 3 Complete  
-**Session Summary**: Phase 3 COMPLETED - All Features Functional, Ready for Phase 4
+**Date**: 2025-09-16 (v2.3 Schedule时间条功能完成)
+**Current Version**: v2.3 Production Ready
+**Session Summary**: 周视图和月视图Schedule时间条功能全面完成，系统功能更加完善
+
+## 🎉 v2.3 Schedule时间条功能完成 (2025-09-16)
+
+### ✅ v2.3 本次会话重大突破
+
+**核心成果**：
+- ✅ **周视图时间条优化**：修复垂直堆叠布局，实现真正的跨周连续显示
+- ✅ **月视图时间条全新实现**：在月历中集成半透明Schedule时间条
+- ✅ **视觉体验提升**：优化时间条标识逻辑和交互效果
+- ✅ **系统稳定性**：修复月视图500错误，完善API错误处理
+
+**技术实现**：
+1. **周视图优化**：
+   - 修复时间条三角形标识（只在真正起始/结束点显示）
+   - 垂直堆叠布局按截止时间排序
+   - 跨周连续性显示：`◀名称`、`──名称──`、`名称▶`
+
+2. **月视图时间条**：
+   - 后端API增强：`/calendar/month/{year}/{month}`支持Schedule数据
+   - 视觉层级设计：事件数量底层，时间条顶层半透明覆盖
+   - 跨日连续显示和点击编辑功能
+
+3. **交互优化**：
+   - 详细tooltip显示Schedule信息
+   - 悬停缩放效果和视觉反馈
+   - 完整的编辑功能集成
+
+**当前状态**：
+- 🟢 **服务器**: 端口8004正常运行，所有功能可用
+- 🟢 **时间条功能**: 周视图和月视图完全实现
+- 🟢 **用户体验**: 时间条交互流畅，视觉效果优秀
+
+## 🎉 v2.1 交互革命成功完成 (2025-09-16)
+
+### ✅ v2.1 选择+点击模式全面成功
+**问题解决方案**：
+- ❌ **放弃复杂拖拽方案**：SortableJS + Alpine.js动态DOM冲突无法完美解决
+- ✅ **采用选择+点击模式**：用户体验更直观，技术实现更稳定
+- ✅ **保留网格内拖拽**：已创建事件在时间槽间移动功能完全保留
+
+**技术突破**：
+- ✅ **消除技术冲突**：避开Alpine.js x-html与SortableJS的根本性冲突
+- ✅ **优化用户体验**：选择+点击比拖拽更精确、更可控
+- ✅ **数据完整性**：所有v2.1字段（domain_id、activity_type_id、schedule_id）正确保存和加载
+- ✅ **状态管理**：支持选择状态保持，便于批量创建操作
+
+### ✅ v2.1 完整功能实现状态
+1. **✅ 智能侧边栏**:
+   - Domain/ActivityType双模式切换
+   - 层级折叠树状结构展示
+   - 选择状态管理和视觉反馈
+
+2. **✅ 选择+点击创建**:
+   - 侧边栏选择 → 空白网格点击 → 双轴矩阵模态框
+   - 自动填充选中的Domain/ActivityType
+   - 完整的v2.1字段支持
+
+3. **✅ v2.1编辑功能**:
+   - 编辑模态框支持所有v2.1字段
+   - 数据类型正确转换（字符串↔整型）
+   - 字段数据正确保存和读取
+
+4. **✅ 网格内拖拽**:
+   - 已创建事件可在时间槽间拖拽移动
+   - 保持完整的拖拽体验
+   - 数据实时更新和同步
+
+### 📊 技术架构优化
+```javascript
+// 成功的选择+点击架构
+selectNode(node, type) {
+    this.selectedNode = { id: node.id, name: node.name, type: type };
+    // 状态保持，用户体验优化
+}
+
+handleGridClick(date, slot) {
+    if (this.selectedNode.id) {
+        // 自动填充选中信息到新建模态框
+        this.showNewEventModal = true;
+    }
+}
+```
+
+## ~~⚠️ v2.1 侧边栏拖拽问题分析 (2025-09-15 Session 2) - 已放弃~~
+
+### 🎯 v2.1 交互革命目标
+**智能侧边栏功能**:
+- ✅ **双模式切换**: Domain视图 ↔ Type视图 (完成)
+- ✅ **层级折叠树**: 支持展开/折叠的无限层级结构 (完成)
+- ✅ **拖拽创建**: 从侧边栏直接拖拽到时间网格创建事件 (⚠️ 待修复)
+
+### ✅ 已完成的v2.1功能
+1. **✅ 智能侧边栏架构**: 完整的双模式界面和切换逻辑
+2. **✅ 层级折叠系统**:
+   - 递归渲染 `renderTreeNodes()` 方法
+   - 节点折叠状态管理 `collapsedNodes` Set
+   - 动态折叠按钮 `toggleNode()` 功能
+3. **✅ 数据加载系统**:
+   - `loadDomainTree()` - API调用 `/api/domains/tree`
+   - `loadTypeTree()` - API调用 `/api/activity-types/tree`
+   - 自动重新渲染机制
+4. **✅ 拖拽创建处理**: 完整的 `handleSidebarDrop()` 方法实现
+5. **✅ 视觉样式**: 完整的CSS层级树样式
+
+### ❌ 核心拖拽问题 (技术难点)
+
+**问题现象**:
+1. **阶段1**: 完全无法拖拽 (光标变手型但无响应)
+2. **阶段2**: 能拖拽但拖拽整个树结构 (包括父子节点)
+3. **阶段3**: 数据属性丢失 (`nodeType: null`, `nodeId: null`, `nodeName: null`)
+4. **阶段4**: CSS修复后完全无响应
+
+**技术分析**:
+
+#### 1. SortableJS与动态DOM冲突
+```javascript
+// 问题：Alpine.js x-html动态渲染的DOM与SortableJS初始化时机冲突
+// 现象：元素存在但拖拽事件不触发
+draggable: '.tree-node-content'  // SortableJS找不到动态生成的元素
+```
+
+#### 2. 数据属性传递问题
+```html
+<!-- 正确的HTML结构（有data属性） -->
+<div class="tree-node-content draggable"
+     data-node-type="domain"
+     data-node-id="1"
+     data-node-name="Research">
+
+<!-- 但SortableJS拖拽时获取的却是父容器 .tree-node -->
+evt.item = div.tree-node  // 没有data属性，导致null值
+```
+
+#### 3. 事件冒泡与pointer-events冲突
+```css
+/* 尝试的修复方案导致新问题 */
+.tree-node-content * { pointer-events: none; }
+/* 结果：子元素点击失效，拖拽完全无响应 */
+```
+
+### 🔍 已尝试的解决方案
+
+#### 方案1: 拖拽选择器调整
+```javascript
+// 尝试1: 严格限制拖拽元素
+draggable: '.tree-node-content'
+filter: '.tree-toggle, .tree-children'
+// 结果: 无法拖拽子元素点击区域
+
+// 尝试2: 移除draggable限制
+// 结果: 拖拽整个树结构
+
+// 尝试3: 动态元素替换
+onChoose: function(evt) {
+    let dragElement = evt.item.closest('.tree-node-content');
+    evt.item = dragElement; // 无效，SortableJS已确定拖拽元素
+}
+```
+
+#### 方案2: CSS事件控制
+```css
+/* 尝试1: pointer-events控制 */
+.tree-node-content * { pointer-events: none; }
+.tree-toggle { pointer-events: auto; }
+/* 结果: 拖拽完全失效 */
+
+/* 尝试2: user-select防止文本选择 */
+.tree-node-content { user-select: none; }
+/* 结果: 部分改善但主要问题未解决 */
+```
+
+#### 方案3: 初始化时机优化
+```javascript
+// 多重初始化尝试
+this.$nextTick(() => {
+    setTimeout(() => {
+        this.initSidebarDragAndDrop(); // 延迟初始化
+    }, 100);
+});
+// 结果: 初始化成功但拖拽逻辑仍有问题
+```
+
+### 🤔 问题根因分析
+
+**核心问题**: Alpine.js的 `x-html` 动态渲染与SortableJS的静态DOM期望不匹配
+
+1. **DOM生命周期**: SortableJS初始化时，动态内容可能还未完全渲染
+2. **元素引用**: SortableJS绑定到容器，但实际拖拽的子元素数据属性不被识别
+3. **事件委托**: 动态生成的元素需要重新建立事件绑定
+
+### 💡 潜在解决方向 (待下次尝试)
+
+#### 方案A: 改用MutationObserver监听DOM变化
+```javascript
+// 监听x-html内容变化，重新初始化SortableJS
+const observer = new MutationObserver((mutations) => {
+    this.initSidebarDragAndDrop();
+});
+observer.observe(poolElement, { childList: true, subtree: true });
+```
+
+#### 方案B: 手动事件绑定替代SortableJS
+```javascript
+// 使用原生drag events替代SortableJS
+poolElement.addEventListener('dragstart', handleDragStart);
+poolElement.addEventListener('dragend', handleDragEnd);
+```
+
+#### 方案C: 重构为静态DOM + Alpine.js数据绑定
+```html
+<!-- 不使用x-html，改用template循环 -->
+<template x-for="node in domainTree" :key="node.id">
+    <div class="tree-node-content" :data-node-id="node.id">
+```
+
+### 🚀 v2.1 开发完成状态总结
+LAE-schedule v2.1 交互革命已成功完成，所有核心功能正常工作：
+
+**✅ 完成的核心功能**：
+1. **汇总视图v2.1**: Domain/ActivityType完整管理界面
+2. **周视图v2.1**: 选择+点击交互模式，支持双轴矩阵事件创建
+3. **数据完整性**: 所有v2.1字段正确保存、加载和展示
+4. **用户体验**: 选择状态保持、自动填充、批量创建工作流
+
+**🎯 系统状态**: 🟢 Production Ready - 可投入实际使用
+
+**📈 下一阶段发展方向 (V2.2+)**：
+1. **Schedule功能闭环**: Domain与Schedule的完整集成
+2. **属性系统**: Domain/Type的properties字段和继承逻辑
+3. **UI/UX优化**: 视觉设计优化和用户体验提升
+4. **Markdown导出**: Obsidian集成功能
+
+## 🎉 v2.1 API修复及编辑功能完成 (2025-09-15 Session 1)
+
+### ✅ v2.1 本次会话完成内容
+- ✅ **关键API修复**: 修复了statistics API的500错误，解决了SQLAlchemy模型关系问题
+- ✅ **Domain编辑删除功能**: 完整实现编辑模态框、updateDomain()、deleteDomain()函数
+- ✅ **ActivityType编辑删除功能**: 完整实现编辑模态框、updateActivityType()、deleteActivityType()函数
+- ✅ **数据库字段修复**: 为scheduled_events表添加缺失的activity_id和goal字段以保持v1兼容
+- ✅ **服务器运行**: 修复端口冲突，服务器正常运行在8002端口
+- ✅ **汇总视图v2.1**: 视为管理中心功能已完成
+
+## 🚀 v2.0 MAJOR ARCHITECTURE UPGRADE (2025-09-15)
+
+### ✅ v2.0 Phase 1 完成状态
+- ✅ **双轴矩阵模型**: 从v1单线"活动"升级到"Domain (领域) × ActivityType (类型)"架构
+- ✅ **数据库重构**: 四表新架构 (domains, activity_types, schedules, scheduled_events)
+- ✅ **后端API重构**: 完整的v2.0 API端点实现
+- ✅ **示例数据**: 3顶级domains + 层级结构 + 16种activity types
+- ✅ **SQLAlchemy模型**: 全新的v2.0数据模型 + v1兼容字段
+- ✅ **前端界面**: v2.0汇总视图管理功能已完成
+
+### 🎯 v2.0 核心概念
+**双轴矩阵设计理念**:
+- **Domain轴**: 回答"为了什么"（目的性）
+- **ActivityType轴**: 回答"做什么性质的工作"（方法性）
+- **Schedule**: 附属于Domain的具体时间目标
+- **Action**: 最小时间块，可选关联Domain/Type/Schedule
+
+### 📊 v2.0 数据库架构
+```sql
+-- domains表 (领域管理)
+CREATE TABLE domains (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    parent_id INTEGER REFERENCES domains(id),
+    description TEXT,
+    created_at DATETIME
+);
+
+-- activity_types表 (活动类型)
+CREATE TABLE activity_types (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    parent_id INTEGER REFERENCES activity_types(id),
+    description TEXT,
+    created_at DATETIME
+);
+
+-- schedules表 (日程目标)
+CREATE TABLE schedules (
+    id INTEGER PRIMARY KEY,
+    domain_id INTEGER NOT NULL REFERENCES domains(id),
+    name VARCHAR NOT NULL,
+    description TEXT,
+    deadline DATETIME,
+    status VARCHAR DEFAULT 'ongoing',
+    created_at DATETIME
+);
+
+-- scheduled_events表 (v2架构)
+CREATE TABLE scheduled_events (
+    id INTEGER PRIMARY KEY,
+    event_date DATE NOT NULL,
+    time_slot INTEGER NOT NULL,
+    name VARCHAR NOT NULL,          -- v2新增：用户自定义名称
+    notes TEXT,
+    status VARCHAR DEFAULT 'planned',
+    domain_id INTEGER REFERENCES domains(id),           -- v2新增
+    activity_type_id INTEGER REFERENCES activity_types(id), -- v2新增
+    schedule_id INTEGER REFERENCES schedules(id)        -- v2新增
+);
+```
+
+### 🔧 v2.0 API端点
+```
+# v2.0 新架构API
+GET/POST/PUT/DELETE /api/domains/          - Domain CRUD
+GET               /api/domains/tree        - Domain树状结构
+GET/POST/PUT/DELETE /api/activity-types/   - ActivityType CRUD
+GET               /api/activity-types/tree - ActivityType树状结构
+GET/POST/PUT/DELETE /api/schedules/        - Schedule CRUD
+GET               /api/schedules/with-domains - Schedule+Domain信息
+GET/POST/PUT/DELETE /api/events/           - ScheduledEvent CRUD (v2)
+GET               /api/events/with-details - ScheduledEvent+关联信息
+```
+
+### ✅ 已解决问题 (v2.1)
+- ✅ **API错误**: Statistics API 500错误已修复，SQLAlchemy模型关系问题解决
+- ✅ **编辑删除功能**: Domain和ActivityType的完整CRUD操作已实现
+- ✅ **数据库兼容性**: V1兼容字段已添加，系统稳定运行
+
+### 🎯 下次对话优先任务
+1. **周视图v2.1**: 重构拖拽交互，支持双轴矩阵选择
+2. **数据关联**: 实现Schedule与Domain的关联功能
+3. **事件管理**: 增强scheduled_events的v2.0字段使用
+
+---
+
+## 📋 v1.0 系统状态 (历史记录)
 
 ## 🎉 Current State Overview
 

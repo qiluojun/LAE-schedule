@@ -6,7 +6,11 @@
       "Bash(pip install:*)",
       "Bash(curl:*)",
       "WebFetch(domain:127.0.0.1)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cp:*)",
+      "Bash(tasklist)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

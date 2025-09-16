@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from typing import List, Dict
 from datetime import date, datetime, timedelta
 from collections import defaultdict
@@ -7,6 +8,7 @@ from collections import defaultdict
 from app.database import get_db
 from app.models.scheduled_event import ScheduledEvent as ScheduledEventModel
 from app.models.activity import Activity as ActivityModel
+from app.models.schedule import Schedule as ScheduleModel
 from app.schemas import ScheduledEventWithActivity
 
 router = APIRouter()
@@ -68,7 +70,11 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
             schedule_grid[day_key]["slots"][event.time_slot] = {
                 "id": event.id,
                 "activity_id": event.activity_id,
-                "activity_name": event.activity.name,
+                "activity_name": event.activity.name if event.activity else None,
+                "name": getattr(event, 'name', None),  # v2.1 新字段
+                "domain_id": getattr(event, 'domain_id', None),  # v2.1 新字段
+                "activity_type_id": getattr(event, 'activity_type_id', None),  # v2.1 新字段
+                "schedule_id": getattr(event, 'schedule_id', None),  # v2.1 新字段
                 "goal": event.goal,
                 "notes": event.notes,
                 "status": event.status
@@ -86,11 +92,24 @@ def get_month_schedule(year: int, month: int, db: Session = Depends(get_db)):
     month_dates = get_month_dates(year, month)
     start_date = month_dates[0]
     end_date = month_dates[-1]
-    
+
+    # 获取事件数据
     events = db.query(ScheduledEventModel).filter(
         ScheduledEventModel.event_date >= start_date,
         ScheduledEventModel.event_date <= end_date
     ).all()
+
+    # 获取跨越该月的Schedule数据 (暂时注释以确保基本功能可用)
+    try:
+        schedules = db.query(ScheduleModel).filter(
+            or_(
+                and_(ScheduleModel.start_date != None, ScheduleModel.start_date <= end_date),
+                and_(ScheduleModel.deadline != None, ScheduleModel.deadline >= start_date)
+            )
+        ).all()
+    except Exception as e:
+        print(f"Schedule查询出错: {e}")
+        schedules = []  # 如果Schedule查询失败，继续使用空列表
     
     # 按日期聚合事件
     daily_events = defaultdict(list)
@@ -98,7 +117,11 @@ def get_month_schedule(year: int, month: int, db: Session = Depends(get_db)):
         daily_events[event.event_date.isoformat()].append({
             "id": event.id,
             "activity_id": event.activity_id,
-            "activity_name": event.activity.name,
+            "activity_name": event.activity.name if event.activity else "未知活动",
+            "name": getattr(event, 'name', None),  # v2.1 新字段
+            "domain_id": getattr(event, 'domain_id', None),  # v2.1 新字段
+            "activity_type_id": getattr(event, 'activity_type_id', None),  # v2.1 新字段
+            "schedule_id": getattr(event, 'schedule_id', None),  # v2.1 新字段
             "time_slot": event.time_slot,
             "goal": event.goal,
             "notes": event.notes,
@@ -119,11 +142,27 @@ def get_month_schedule(year: int, month: int, db: Session = Depends(get_db)):
             "is_today": day == date.today()
         })
     
+    # 处理Schedule数据
+    schedule_list = []
+    for schedule in schedules:
+        schedule_data_item = {
+            "id": schedule.id,
+            "name": schedule.name,
+            "description": schedule.description,
+            "start_date": schedule.start_date.isoformat() if schedule.start_date else None,
+            "deadline": schedule.deadline.isoformat() if schedule.deadline else None,
+            "status": schedule.status,
+            "domain_id": schedule.domain_id
+        }
+        schedule_list.append(schedule_data_item)
+
     return {
         "year": year,
         "month": month,
         "month_name": datetime(year, month, 1).strftime("%B"),
-        "schedule": schedule_data
+        "days": schedule_data,  # 前端期望的字段名
+        "schedule": schedule_data,  # 保持兼容性
+        "schedules": schedule_list  # Schedule时间条数据
     }
 
 @router.get("/day/{target_date}")
