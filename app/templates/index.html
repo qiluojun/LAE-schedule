@@ -54,12 +54,64 @@
             background: #e3f2fd;
             border: 2px dashed #2196f3;
         }
+
+        /* V3 拖拽样式 */
+        .sortable-ghost-v3 {
+            opacity: 0.3;
+            background: rgba(33, 150, 243, 0.1);
+            border: 2px dashed #2196f3;
+            transform: scale(1.05);
+        }
+        .sortable-chosen-v3 {
+            opacity: 0.8;
+            transform: scale(1.02) rotate(1deg);
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .sortable-drag-v3 {
+            opacity: 0.9;
+            transform: rotate(3deg);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+        .sortable-fallback-v3 {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #2196f3;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        /* 吸附指示器样式 */
+        .snap-indicator {
+            position: absolute;
+            left: 80px; /* 对齐到网格区域 */
+            right: 0;
+            height: 2px;
+            background: #ff5722;
+            z-index: 2000;
+            display: none;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(255, 87, 34, 0.6);
+        }
+        .snap-indicator.active {
+            display: block;
+            animation: snapPulse 0.3s ease-in-out;
+        }
+        @keyframes snapPulse {
+            0% { opacity: 0.5; transform: scaleY(0.5); }
+            50% { opacity: 1; transform: scaleY(1.5); }
+            100% { opacity: 0.8; transform: scaleY(1); }
+        }
         .time-slot.sortable-over {
             background-color: #e8f5e8;
             border-color: #4caf50;
             border-width: 3px;
             transform: scale(1.02);
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .day-column-v3.sortable-over,
+        .day-column-v3-over {
+            background-color: rgba(33, 150, 243, 0.1);
+            box-shadow: inset 0 0 15px rgba(33, 150, 243, 0.3);
+            border: 2px dashed #2196f3;
         }
         .scheduled-event {
             background-color: #fff3cd;
@@ -142,6 +194,16 @@
             background-color: #d4edda !important;
             border-color: #28a745 !important;
             border-width: 2px;
+        }
+
+        .tree-node-content.tree-node-selected {
+            background-color: #e3f2fd !important;
+            border: 2px solid #2196f3 !important;
+            font-weight: bold;
+        }
+
+        .tree-node-content.tree-node-selected:hover {
+            background-color: #bbdefb !important;
         }
 
         .tree-node-content.selectable * {
@@ -339,6 +401,334 @@
             min-height: 120px;
             border-radius: 0.375rem;
             border: 2px solid #495057;
+        }
+
+        /* ========== V3.0 动态画布UI系统 ========== */
+
+        /* V3 微网格容器 */
+        .week-canvas-v3 {
+            position: relative;
+            background-color: #fafafa;
+            border: 2px solid #dee2e6;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            overflow: auto;
+            min-height: 400px;
+            max-height: 70vh;
+        }
+
+        /* 画布网格容器 */
+        .canvas-grid-container {
+            display: flex;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 时间轴样式 */
+        .time-axis-v3 {
+            width: 80px;
+            background-color: #f8f9fa;
+            border-right: 2px solid #495057;
+            position: relative;
+            flex-shrink: 0;
+            z-index: 5;
+            transform: translateY(3px); /* 简单向下偏移3px */
+        }
+
+        /* 日期标题行 */
+        .day-headers-row {
+            position: absolute;
+            top: 0;
+            left: 80px; /* 保持与时间轴宽度一致的偏移 */
+            right: 0;
+            height: 50px;
+            display: flex;
+            background-color: #6c757d;
+            z-index: 10;
+        }
+
+        /* 天列容器 */
+        .days-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            margin-left: 0px; /* 移除左边距，避免与时间轴宽度重复偏移 */
+            margin-top: 50px;
+            height: calc(100% - 50px); /* 减去标题高度 */
+            min-height: calc(100vh - 200px); /* 确保足够高度 */
+        }
+
+        /* 网格线层 */
+        .grid-lines-layer {
+            position: absolute;
+            top: 50px;
+            left: 80px;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* 小时标记 */
+        .hour-marker {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 60px; /* 6个10分钟格的高度 */
+            border-bottom: 2px solid #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #495057;
+            background-color: rgba(248, 249, 250, 0.9);
+        }
+
+        /* 标题空白格子 */
+        .hour-marker.header-spacer {
+            background-color: #f8f9fa;
+            border-bottom: none;
+            border-right: 2px solid #495057;
+        }
+
+        /* 10分钟网格线 - 细线 */
+        .grid-line-10min {
+            position: absolute;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 1px;
+            background-color: #e9ecef;
+            pointer-events: none;
+        }
+
+        /* 小时网格线 - 粗线 */
+        .grid-line-hour {
+            position: absolute;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #495057;
+            pointer-events: none;
+        }
+
+        /* 日期列 */
+        .day-column-v3 {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid #dee2e6;
+            background-color: transparent;
+            min-height: calc(100vh - 150px); /* 确保足够高度 */
+            height: 100%; /* 强制填满容器高度 */
+        }
+
+        .day-column-v3:last-child {
+            border-right: none;
+        }
+
+        /* 日期标题 */
+        .day-header-v3 {
+            flex: 1;
+            background-color: #6c757d;
+            color: white;
+            text-align: center;
+            padding: 0.5rem;
+            font-weight: bold;
+            font-size: 0.875rem;
+            border-right: 1px solid #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: pre-line;
+        }
+
+        .day-header-v3:last-child {
+            border-right: none;
+        }
+
+        /* V3 动态卡片样式 */
+        .task-card-v3 {
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 0.75rem;
+            z-index: 5;
+            overflow: hidden;
+            min-height: 20px; /* 最小2个网格单位 */
+        }
+
+        .task-card-v3:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            z-index: 6;
+        }
+
+        .task-card-v3:active {
+            cursor: grabbing;
+        }
+
+        /* 精确任务特殊样式 */
+        .task-card-v3.precise {
+            background: linear-gradient(135deg, #d4edda 0%, #a8e6cf 100%);
+            border-color: #28a745;
+        }
+
+        .task-card-v3.precise::before {
+            content: "⏰";
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 0.6rem;
+        }
+
+        /* 并行任务样式 */
+        .task-card-v3.parallel {
+            left: 50%; /* 右半部分 */
+            right: 4px;
+        }
+
+        .task-card-v3.parallel-left {
+            right: 50%; /* 左半部分 */
+        }
+
+        /* 待定区域 */
+        .pending-area-v3 {
+            grid-column: 1 / -1;
+            background-color: #f1f3f4;
+            border-bottom: 2px solid #dee2e6;
+            padding: 1rem;
+            min-height: 80px;
+            position: relative;
+        }
+
+        .pending-card-v3 {
+            display: inline-block;
+            background-color: #e9ecef;
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin: 4px;
+            cursor: grab;
+            font-size: 0.75rem;
+            max-width: 150px;
+            height: 32px;
+            line-height: 20px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        /* 拖拽吸附指示器 */
+        .snap-indicator {
+            position: absolute;
+            left: 80px;
+            right: 0;
+            height: 2px;
+            background-color: #007bff;
+            z-index: 15;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+        }
+
+        .snap-indicator.active {
+            opacity: 1;
+        }
+
+        /* V3智能吸附增强 */
+        .v3-snap-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #007bff, #00d4aa);
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            box-shadow: 0 0 6px rgba(0, 123, 255, 0.6);
+        }
+
+        .v3-snap-line.active {
+            opacity: 0.9;
+        }
+
+        .v3-snap-tooltip {
+            position: absolute;
+            left: 50%;
+            top: -25px;
+            transform: translateX(-50%);
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .v3-snap-tooltip.active {
+            opacity: 1;
+        }
+
+        /* 网格切换按钮 */
+        .grid-toggle-v3 {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 20;
+            background-color: rgba(255,255,255,0.9);
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        /* 滚动条样式 */
+        .week-canvas-v3::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .week-canvas-v3::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .week-canvas-v3::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .week-canvas-v3::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .week-canvas-v3 {
+                grid-template-columns: 60px repeat(7, 1fr);
+                font-size: 0.7rem;
+            }
+
+            .time-axis-v3 {
+                grid-template-columns: 60px;
+            }
+
+            .task-card-v3 {
+                font-size: 0.7rem;
+                padding: 6px;
+            }
         }
     </style>
 </head>
@@ -542,14 +932,102 @@
                                 下一周 ›
                             </button>
                         </div>
+
+                        <!-- V3模式切换按钮 -->
+                        <div class="d-flex align-items-center">
+                            <label class="form-check-label me-2">画布模式:</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       x-model="isV3Mode" @change="switchGridMode()">
+                                <label class="form-check-label" x-text="isV3Mode ? 'V3动态画布' : 'V2经典网格'"></label>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body p-0">
-                        <!-- Schedule时间条区域 -->
-                        <div class="schedule-timeline-container" id="schedule-timeline" x-html="renderScheduleTimeline()">
-                        </div>
-                        <!-- 周视图网格 -->
-                        <div class="week-grid" id="week-grid" x-html="renderFullWeekGrid()">
-                        </div>
+                        <!-- V2经典模式 -->
+                        <template x-if="!isV3Mode">
+                            <div>
+                                <!-- Schedule时间条区域 -->
+                                <div class="schedule-timeline-container" id="schedule-timeline" x-html="renderScheduleTimeline()">
+                                </div>
+                                <!-- V2周视图网格 -->
+                                <div class="week-grid" id="week-grid" x-html="renderFullWeekGrid()">
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- V3动态画布模式 -->
+                        <template x-if="isV3Mode">
+                            <div>
+                                <!-- V3画布容器 -->
+                                <div class="position-relative">
+                                    <!-- 控制面板 -->
+                                    <div class="grid-toggle-v3">
+                                        <button class="btn btn-sm btn-outline-secondary me-2" @click="isV3Mode = false">
+                                            ← 返回V2
+                                        </button>
+                                        <div class="d-flex align-items-center">
+                                            <label class="form-label me-2 mb-0">缩放:</label>
+                                            <button class="btn btn-sm btn-outline-primary me-1" @click="adjustZoom(-0.25)" :disabled="v3ZoomLevel <= 0.5">-</button>
+                                            <span class="mx-2" x-text="Math.round(v3ZoomLevel * 100) + '%'"></span>
+                                            <button class="btn btn-sm btn-outline-primary" @click="adjustZoom(0.25)" :disabled="v3ZoomLevel >= 2.0">+</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 待定区域 -->
+                                    <div class="pending-area-v3">
+                                        <h6 class="mb-2">📋 待定任务</h6>
+                                        <div id="pending-cards-v3" x-html="renderPendingCards()">
+                                        </div>
+                                    </div>
+
+                                    <!-- V3微网格画布 -->
+                                    <div class="week-canvas-v3" id="week-canvas-v3"
+                                         :style="`height: ${getCanvasHeight()}px;`">
+
+                                        <!-- 网格容器 -->
+                                        <div class="canvas-grid-container">
+                                            <!-- 时间轴 -->
+                                            <div class="time-axis-v3" x-html="renderTimeAxis()">
+                                            </div>
+
+                                            <!-- 日期标题行 -->
+                                            <div class="day-headers-row">
+                                                <template x-for="(day, index) in weekDates" :key="day">
+                                                    <div class="day-header-v3" x-text="getDayHeaderV3(day)">
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <!-- 7天列容器 -->
+                                            <div class="days-container">
+                                                <template x-for="(day, index) in weekDates" :key="day">
+                                                    <div class="day-column-v3" @click="handleV3GridClick($event, day)">
+                                                        <!-- 当天的任务卡片 -->
+                                                        <div x-html="renderDayCardsV3(day)">
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <!-- 网格线层 -->
+                                            <div class="grid-lines-layer" x-html="renderGridLines()">
+                                            </div>
+
+                                            <!-- 吸附指示器 -->
+                                            <div class="snap-indicator" id="snap-indicator" :style="`top: ${snapIndicatorY}px`">
+                                            </div>
+
+                                            <!-- V3专用吸附指示器 -->
+                                            <div class="v3-snap-line" id="v3-snap-line" x-show="v3SnapIndicator.visible"
+                                                 :style="`top: ${v3SnapIndicator.y}px`">
+                                                <div class="v3-snap-tooltip" x-text="v3SnapIndicator.tooltip"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -603,12 +1081,52 @@
                                     <input type="date" class="form-control" x-model="newEvent.event_date" required readonly>
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label">⏰ 时间槽</label>
-                                    <select class="form-control" x-model="newEvent.time_slot" required>
-                                        <template x-for="slot in timeSlots" :key="slot.value">
-                                            <option :value="slot.value" x-text="slot.name"></option>
-                                        </template>
-                                    </select>
+                                    <label class="form-label">⏰ 时间槽 (自动计算)</label>
+                                    <input type="text" class="form-control"
+                                           x-bind:value="getTimeSlotDisplay(newEvent.start_time)"
+                                           readonly style="background-color: #f8f9fa;"
+                                           x-text="console.log('Time slot display value:', getTimeSlotDisplay(newEvent.start_time))">
+                                    <input type="hidden" x-model="newEvent.time_slot">
+                                </div>
+                            </div>
+
+                            <!-- V3.0 时长和精确时间设置 -->
+                            <div x-show="isV3Mode" class="card mb-3" style="border-left: 4px solid #007bff;">
+                                <div class="card-body py-2">
+                                    <h6 class="card-title mb-2">🎯 V3 动态画布设置</h6>
+
+                                    <div class="row mb-2">
+                                        <div class="col-4">
+                                            <label class="form-label">🕐 起始时间</label>
+                                            <input type="time" class="form-control" x-model="newEvent.start_time"
+                                                   @input="updateTimeSlot()">
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="form-label">⏱️ 预计时长 (分钟)</label>
+                                            <input type="number" class="form-control" x-model="newEvent.duration"
+                                                   min="10" max="480" step="10" value="60"
+                                                   placeholder="60">
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input" type="checkbox"
+                                                       x-model="newEvent.is_precise" id="preciseTimeCheck">
+                                                <label class="form-check-label" for="preciseTimeCheck">
+                                                    🎯 精确时间
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 结束时间显示 -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label class="form-label">🏁 结束时间 (计算得出)</label>
+                                            <input type="text" class="form-control"
+                                                   x-bind:value="calculateEndTime(newEvent.start_time, newEvent.duration)"
+                                                   readonly style="background-color: #f8f9fa;">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -751,12 +1269,11 @@
                                     <input type="date" class="form-control" x-model="editingEvent.event_date" required readonly>
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label">⏰ 时间槽</label>
-                                    <select class="form-control" x-model="editingEvent.time_slot" required>
-                                        <template x-for="slot in timeSlots" :key="slot.value">
-                                            <option :value="slot.value" x-text="slot.name"></option>
-                                        </template>
-                                    </select>
+                                    <label class="form-label">⏰ 时间槽 (自动计算)</label>
+                                    <input type="text" class="form-control"
+                                           x-bind:value="getTimeSlotDisplay(editingEvent.start_time)"
+                                           readonly style="background-color: #f8f9fa;">
+                                    <input type="hidden" x-model="editingEvent.time_slot">
                                 </div>
                             </div>
 
@@ -765,6 +1282,45 @@
                                 <label class="form-label">📝 事件名称 <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" x-model="editingEvent.name"
                                        placeholder="描述你要做的具体事情" required>
+                            </div>
+
+                            <!-- V3.0 时长和精确时间设置 (编辑模式) -->
+                            <div x-show="isV3Mode" class="card mb-3" style="border-left: 4px solid #28a745;">
+                                <div class="card-body py-2">
+                                    <h6 class="card-title mb-2">🔧 V3 动态画布设置</h6>
+
+                                    <div class="row mb-2">
+                                        <div class="col-4">
+                                            <label class="form-label">🕐 起始时间</label>
+                                            <input type="time" class="form-control" x-model="editingEvent.start_time"
+                                                   @input="updateEditingTimeSlot()">
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="form-label">⏱️ 预计时长 (分钟)</label>
+                                            <input type="number" class="form-control" x-model="editingEvent.duration"
+                                                   min="10" max="480" step="10">
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input" type="checkbox"
+                                                       x-model="editingEvent.is_precise" id="editPreciseTimeCheck">
+                                                <label class="form-check-label" for="editPreciseTimeCheck">
+                                                    🎯 精确时间
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 结束时间显示 -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label class="form-label">🏁 结束时间 (计算得出)</label>
+                                            <input type="text" class="form-control"
+                                                   x-bind:value="calculateEndTime(editingEvent.start_time, editingEvent.duration)"
+                                                   readonly style="background-color: #f8f9fa;">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- 双轴矩阵选择 -->
@@ -1160,6 +1716,26 @@
 
                 // 用于强制触发Alpine.js重新渲染的辅助变量
                 refreshTrigger: 0,
+
+                // V3.0 动态画布模式
+                isV3Mode: false, // 是否启用V3模式
+                gridSnapSize: 10, // 网格吸附大小(分钟)
+                canvasScrollTop: 0, // 画布滚动位置
+                snapIndicatorY: 0, // 吸附指示器位置
+                v3SnapIndicator: { // V3专用吸附指示器
+                    visible: false,
+                    y: 0,
+                    tooltip: ''
+                },
+
+                // V3 拖拽状态
+                isDragging: false,
+                draggedEventId: null,
+                dropProcessing: false, // 防止重复处理drop事件
+                lastSnapTime: null, // 保存最后吸附的时间
+                v3TimeStart: 7, // V3开始时间(小时) - 7:00
+                v3TimeEnd: 23, // V3结束时间(小时) - 23:00
+                v3ZoomLevel: 1.0, // V3缩放级别 (0.5 - 2.0)
                 
                 // 汇总视图数据
                 summaryStats: null,
@@ -1211,6 +1787,9 @@
                     type: '', // 'domain' or 'type'
                     description: ''
                 },
+                // V3 侧边栏选择状态
+                selectedDomainId: null,
+                selectedActivityTypeId: null,
 
                 // 表单数据
                 newActivity: {
@@ -1226,7 +1805,12 @@
                     domain_id: '',
                     activity_type_id: '',
                     schedule_id: '',
-                    notes: ''
+                    notes: '',
+                    // V3.0 新字段
+                    duration: 60,
+                    start_time: null,
+                    is_precise: false,
+                    canvas_position_y: 0
                 },
                 // v2.0 新增表单数据
                 newDomain: {
@@ -1589,7 +2173,12 @@
                             activity_type_id: this.newEvent.activity_type_id && this.newEvent.activity_type_id !== '' ? parseInt(this.newEvent.activity_type_id) : null,
                             schedule_id: this.newEvent.schedule_id && this.newEvent.schedule_id !== '' ? parseInt(this.newEvent.schedule_id) : null,
                             notes: this.newEvent.notes || '',
-                            status: 'planned'
+                            status: 'planned',
+                            // V3.0 新字段支持
+                            duration: this.newEvent.duration ? parseInt(this.newEvent.duration) : 60,
+                            start_time: this.newEvent.start_time ? this.formatTimeForAPI(this.newEvent.start_time) : null,
+                            is_precise: !!this.newEvent.is_precise,
+                            canvas_position_y: this.newEvent.canvas_position_y || 0
                         };
 
                         console.log('🎯 Creating new event with data:', eventData);
@@ -1604,7 +2193,22 @@
 
                         if (!response.ok) {
                             const errorData = await response.json();
-                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || 'Unknown error'}`);
+                            console.error('🚨 API Error Details:', errorData);
+
+                            // 处理422验证错误的详细信息
+                            if (response.status === 422 && errorData.detail) {
+                                let errorMsg = '验证错误:\n';
+                                if (Array.isArray(errorData.detail)) {
+                                    errorData.detail.forEach(err => {
+                                        errorMsg += `- ${err.loc?.join('.') || 'unknown'}: ${err.msg}\n`;
+                                    });
+                                } else {
+                                    errorMsg += JSON.stringify(errorData.detail, null, 2);
+                                }
+                                throw new Error(errorMsg);
+                            }
+
+                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || JSON.stringify(errorData)}`);
                         }
 
                         const createdEvent = await response.json();
@@ -1619,7 +2223,12 @@
                             domain_id: '',
                             activity_type_id: '',
                             schedule_id: '',
-                            notes: ''
+                            notes: '',
+                            // V3.0 新字段
+                            duration: 60,
+                            start_time: null,
+                            is_precise: false,
+                            canvas_position_y: 0
                         };
 
                         // 重新加载周数据
@@ -2145,7 +2754,7 @@
                         const targetDate = this.weekDates[0]; // 周一
                         console.log('Loading week schedule for:', targetDate);
                         const data = await this.apiCall(`/calendar/week/${targetDate}`);
-                        
+
                         // 转换数据格式以便查找
                         this.weekSchedule = {};
                         data.schedule.forEach(day => {
@@ -2156,6 +2765,16 @@
 
                         // 同时加载当前周的Schedule时间条数据
                         await this.loadWeeklySchedules();
+
+                        // 在V3模式下重新初始化拖拽功能
+                        if (this.isV3Mode) {
+                            this.$nextTick(() => {
+                                setTimeout(() => {
+                                    this.initV3DragAndDrop();
+                                    console.log('🔄 重新初始化V3拖拽功能');
+                                }, 100);
+                            });
+                        }
                     } catch (error) {
                         console.error('加载周日程失败:', error);
                         // 即使加载失败也要初始化空的周日程对象
@@ -2349,17 +2968,36 @@
                             return;
                         }
 
+                        // 确保time_slot是有效值，如果无效则根据start_time重新计算
+                        let timeSlot = this.editingEvent.time_slot;
+                        if (!timeSlot || ![21, 22, 51, 52, 71].includes(parseInt(timeSlot))) {
+                            if (this.editingEvent.start_time) {
+                                timeSlot = this.getTimeSlotFromTime(this.editingEvent.start_time);
+                                console.log('🔧 Recalculated time_slot from start_time:', this.editingEvent.start_time, '->', timeSlot);
+                            } else {
+                                timeSlot = 21; // 默认值
+                                console.log('🔧 Using default time_slot:', timeSlot);
+                            }
+                        }
+
+                        console.log('📝 Updating event with time_slot:', timeSlot);
+
                         const eventData = {
                             name: this.editingEvent.name.trim(),
                             event_date: this.editingEvent.event_date,
-                            time_slot: parseInt(this.editingEvent.time_slot),
+                            time_slot: parseInt(timeSlot),
                             domain_id: this.editingEvent.domain_id && this.editingEvent.domain_id !== '' ? parseInt(this.editingEvent.domain_id) : null,
                             activity_type_id: this.editingEvent.activity_type_id && this.editingEvent.activity_type_id !== '' ? parseInt(this.editingEvent.activity_type_id) : null,
                             schedule_id: this.editingEvent.schedule_id && this.editingEvent.schedule_id !== '' ? parseInt(this.editingEvent.schedule_id) : null,
                             notes: this.editingEvent.notes || '',
                             status: this.editingEvent.status || 'planned',
                             // v1 兼容字段
-                            goal: this.editingEvent.goal || ''
+                            goal: this.editingEvent.goal || '',
+                            // V3.0 新字段支持
+                            duration: this.editingEvent.duration ? parseInt(this.editingEvent.duration) : 60,
+                            start_time: this.editingEvent.start_time ? this.formatTimeForAPI(this.editingEvent.start_time) : null,
+                            is_precise: !!this.editingEvent.is_precise,
+                            canvas_position_y: this.editingEvent.canvas_position_y || 0
                         };
 
                         console.log('📝 Updating event with data:', eventData);
@@ -3768,6 +4406,1120 @@
                 renderWeekGrid() {
                     return this.renderFullWeekGrid();
                 },
+
+                // ========== V3.0 动态画布方法 ==========
+
+                // 切换网格模式
+                switchGridMode() {
+                    console.log('🔄 Switching grid mode to:', this.isV3Mode ? 'V3' : 'V2');
+
+                    // 重新初始化相应的拖拽功能
+                    this.$nextTick(() => {
+                        if (this.isV3Mode) {
+                            this.initV3DragAndDrop();
+                            this.scrollToCurrentTime();
+                        } else {
+                            this.initDragAndDrop();
+                        }
+                    });
+                },
+
+                // 渲染时间轴
+                renderTimeAxis() {
+                    let html = '';
+
+                    const hours = this.v3TimeEnd - this.v3TimeStart + 1; // 修复：17小时（包含23:00）
+                    const gridHeight = hours * 6 * 10 * this.v3ZoomLevel; // 17小时 × 6格/小时 × 10px × 缩放
+                    const headerHeight = 50; // 日期标题行高度
+
+                    // 添加空白标题格子，与日期标题行对齐
+                    html += `
+                        <div class="hour-marker header-spacer" style="top: 0px; height: ${headerHeight}px;">
+                            <!-- 空白标题区域 -->
+                        </div>
+                    `;
+
+                    // 现在小时标记从header下方开始，与网格对齐
+                    for (let hour = this.v3TimeStart; hour <= this.v3TimeEnd; hour++) {
+                        const relativeHour = hour - this.v3TimeStart;
+                        const top = headerHeight + (relativeHour * 60 * this.v3ZoomLevel);
+                        html += `
+                            <div class="hour-marker" style="top: ${top}px; height: ${60 * this.v3ZoomLevel}px;">
+                                ${hour.toString().padStart(2, '0')}:00
+                            </div>
+                        `;
+                    }
+
+                    return html;
+                },
+
+                // 渲染网格线
+                renderGridLines() {
+                    let html = '';
+
+                    // 修复：7:00-23:00实际是17小时（包含23:00这个完整小时）
+                    const hours = this.v3TimeEnd - this.v3TimeStart + 1; // 7到23包含23，应该是17小时
+                    const totalGrids = hours * 6; // 17小时 × 6格/小时 = 102个10分钟格
+
+                    for (let i = 0; i <= totalGrids; i++) {
+                        const top = i * 10 * this.v3ZoomLevel; // 每个网格10px × 缩放
+                        const isHourLine = i % 6 === 0; // 每6个网格是一小时
+
+                        html += `
+                            <div class="${isHourLine ? 'grid-line-hour' : 'grid-line-10min'}"
+                                 style="top: ${top}px;">
+                            </div>
+                        `;
+                    }
+
+                    return html;
+                },
+
+                // 渲染日期标题
+                getDayHeaderV3(day) {
+                    const date = new Date(day);
+                    const weekday = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][date.getDay() === 0 ? 6 : date.getDay() - 1];
+                    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+                    return `${weekday}\n${dateStr}`;
+                },
+
+                // 渲染单天的任务卡片
+                renderDayCardsV3(day) {
+                    try {
+                        let html = '';
+
+                        // 获取该日期的所有事件
+                        const dayData = this.weekSchedule[day];
+                        if (!dayData) {
+                            console.log('No events for day:', day);
+                            return ''; // 返回空字符串而不是undefined
+                        }
+
+                        const events = Object.values(dayData);
+                        // console.log(`Rendering ${events.length} events for ${day}`);
+
+                        events.forEach(event => {
+                            try {
+                                if (event && event.id) { // 添加null和id检查
+                                    const cardHtml = this.renderTaskCardV3(event);
+                                    if (cardHtml) {
+                                        html += cardHtml;
+                                    }
+                                } else {
+                                    // 静默跳过null事件，避免控制台噪音
+                                }
+                            } catch (error) {
+                                console.error('Error rendering card for event:', event, error);
+                            }
+                        });
+
+                        return html;
+                    } catch (error) {
+                        console.error('Error in renderDayCardsV3:', error);
+                        return ''; // 确保始终返回字符串
+                    }
+                },
+
+                // 渲染单个任务卡片
+                renderTaskCardV3(event) {
+                    console.log('🎯 Rendering card for event:', event.id, 'start_time:', event.start_time, 'time_slot:', event.time_slot);
+
+                    // 安全获取duration，处理null/undefined情况
+                    const duration = (event.duration !== null && event.duration !== undefined) ? event.duration : 60;
+                    const heightPx = Math.max((duration / 10) * 10 * this.v3ZoomLevel, 20 * this.v3ZoomLevel); // 最小20px × 缩放
+
+                    // 计算位置 - 优先使用start_time，回退到time_slot
+                    let topPx = 0;
+                    let timeForCalculation = null;
+
+                    if (event.start_time && event.start_time !== 'None' && event.start_time !== null) {
+                        // 有起始时间 - 直接解析start_time（精确和模糊都有start_time）
+                        console.log('🕐 Using start_time for position:', event.start_time);
+                        timeForCalculation = event.start_time;
+                        const [hours, minutes] = event.start_time.split(':').map(Number);
+                        const totalMinutes = hours * 60 + minutes;
+                        const relativeMinutes = totalMinutes - (this.v3TimeStart * 60); // 相对于7:00的分钟数
+                        topPx = Math.max(0, (relativeMinutes / 10) * 10 * this.v3ZoomLevel); // 转换为网格单位并缩放
+                        console.log('🎯 Calculated position:', { totalMinutes, relativeMinutes, topPx });
+                    } else {
+                        // 回退到time_slot（兼容旧数据）
+                        console.log('🕐 Using time_slot for position:', event.time_slot);
+                        const slotTimes = {
+                            21: 8 * 60,   // 上午第1时段: 8:00
+                            22: 10 * 60,  // 上午第2时段: 10:00
+                            51: 14 * 60,  // 下午第1时段: 14:00
+                            52: 16 * 60,  // 下午第2时段: 16:00
+                            71: 19 * 60   // 晚上时段: 19:00
+                        };
+                        const totalMinutes = slotTimes[event.time_slot] || (8 * 60);
+                        const relativeMinutes = totalMinutes - (this.v3TimeStart * 60);
+                        topPx = Math.max(0, (relativeMinutes / 10) * 10 * this.v3ZoomLevel);
+
+                        // 为了调试，计算等效的start_time
+                        const hours = Math.floor(totalMinutes / 60);
+                        const minutes = totalMinutes % 60;
+                        timeForCalculation = hours + ':' + minutes.toString().padStart(2, '0');
+                        console.log('🎯 Time slot', event.time_slot, 'converted to time:', timeForCalculation);
+                    }
+
+                    // 并行任务位置调整
+                    const parallelClass = event.canvas_position_y > 0 ? 'parallel' : '';
+                    const preciseClass = event.is_precise ? 'precise' : '';
+
+                    console.log('🎯 Final render - topPx:', topPx, 'heightPx:', heightPx, 'timeForCalculation:', timeForCalculation);
+
+                    return `
+                        <div class="task-card-v3 ${preciseClass} ${parallelClass}"
+                             style="top: ${topPx}px; height: ${heightPx}px;"
+                             data-event-id="${event.id}"
+                             data-duration="${duration}"
+                             onclick="window.laeAppInstance.editEventV3(${event.id}); event.stopPropagation(); return false;">
+                            <div class="task-card-title">
+                                ${event.name || event.activity_name || '未命名任务'}
+                            </div>
+                            <div class="task-card-meta">
+                                ${timeForCalculation || '未设置时间'}
+                                ${event.is_precise ? ' (精确)' : ' (10分钟精度)'}
+                                (${duration}min)
+                            </div>
+                        </div>
+                    `;
+                },
+
+                // 渲染待定卡片
+                renderPendingCards() {
+                    // 暂时返回示例卡片
+                    return `
+                        <div class="pending-card-v3" data-task="sample1">
+                            示例任务1
+                        </div>
+                        <div class="pending-card-v3" data-task="sample2">
+                            示例任务2
+                        </div>
+                    `;
+                },
+
+                // 滚动到当前时间
+                scrollToCurrentTime() {
+                    const canvas = document.getElementById('week-canvas-v3');
+                    if (canvas) {
+                        const now = new Date();
+                        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                        const scrollTop = Math.max(0, (currentMinutes / 10 * 10) - 200); // 当前时间往上200px
+                        canvas.scrollTop = scrollTop;
+                    }
+                },
+
+                // 计算时间吸附
+                snapToGrid(mouseY) {
+                    const canvas = document.getElementById('week-canvas-v3');
+                    if (!canvas) return 0;
+
+                    const canvasRect = canvas.getBoundingClientRect();
+                    // 减去header高度(60px)，得到相对于网格内容区域的位置
+                    const relativeY = mouseY - canvasRect.top - 60 + canvas.scrollTop;
+
+                    // 吸附到最近的10分钟网格单位
+                    const gridUnit = 10 * this.v3ZoomLevel;
+                    const snapY = Math.max(0, Math.round(relativeY / gridUnit) * gridUnit);
+
+                    // console.log('🧭 吸附计算调试:', { snapY: snapY });
+
+                    // 更新吸附指示器位置（需要加回header偏移用于显示）
+                    this.snapIndicatorY = snapY;
+                    this.showSnapIndicator(snapY + 60); // 显示时加回header偏移
+
+                    return snapY;
+                },
+
+                // 显示吸附指示器
+                showSnapIndicator(y) {
+                    const indicator = document.querySelector('.snap-indicator');
+                    if (indicator) {
+                        indicator.style.display = 'block';
+                        indicator.style.top = y + 'px';
+                        indicator.classList.add('active');
+                    }
+                },
+
+                // 隐藏吸附指示器
+                hideSnapIndicator() {
+                    const indicator = document.querySelector('.snap-indicator');
+                    if (indicator) {
+                        indicator.style.display = 'none';
+                        indicator.classList.remove('active');
+                    }
+                },
+
+                // 计算拖拽放置位置
+                calculateDropPosition(evt) {
+                    try {
+                        // 获取放置目标的日期列
+                        const dayColumn = evt.to.closest('.day-column-v3');
+                        if (!dayColumn) {
+                            console.error('❌ Not dropped in a valid day column');
+                            return null;
+                        }
+
+                        // 获取日期（基于鼠标水平位置）
+                        // 确保只计算day-column-v3元素的索引
+                        const daysContainer = dayColumn.parentElement;
+                        const dayColumns = daysContainer.querySelectorAll('.day-column-v3');
+                        const dayIndex = Array.from(dayColumns).indexOf(dayColumn);
+
+                        const startDate = new Date(this.currentWeekStart);
+                        startDate.setDate(startDate.getDate() + dayIndex);
+                        const dateStr = startDate.toISOString().split('T')[0];
+
+                        // console.log('🗓️ 位置计算:', { dayIndex, dateStr });
+
+                        // 直接使用蓝线指示器的位置（竖直位置）
+                        const snappedY = this.snapIndicatorY;
+
+                        // 直接计算蓝线对应的时间 - 修复时间计算逻辑
+                        // snappedY是像素值，需要转换为分钟
+                        // 每10分钟在画布上对应 10 * this.v3ZoomLevel 像素
+                        const minutesFromStart = Math.round(snappedY / (10 * this.v3ZoomLevel)) * 10;
+                        const dropHour = this.v3TimeStart + Math.floor(minutesFromStart / 60);
+                        const dropMinute = minutesFromStart % 60;
+
+                        console.log('⏰ 拖拽目标时间:', `${dropHour}:${dropMinute.toString().padStart(2, '0')}`);
+
+                        const startTime = dropHour + ':' + dropMinute.toString().padStart(2, '0');
+                        const timeSlot = this.getTimeSlotFromTime(startTime);
+
+                        // 计算并行位置的Y坐标(用于并行任务)
+                        const canvasY = this.calculateCanvasPositionY(dateStr, startTime);
+
+                        // console.log('📍 简化位置计算:', { 蓝线位置: snappedY, 计算时间: startTime, 目标日期: dateStr });
+
+                        return {
+                            date: dateStr,
+                            startTime: startTime,
+                            timeSlot: timeSlot,
+                            canvasY: canvasY
+                        };
+
+                    } catch (error) {
+                        console.error('❌ Error calculating drop position:', error);
+                        return null;
+                    }
+                },
+
+                // 计算并行位置的Y坐标
+                calculateCanvasPositionY(date, startTime) {
+                    // 检查该时间段是否已经有任务
+                    const existingTasks = this.getTasksAtTimeSlot(date, startTime);
+
+                    // 如果没有冲突，返回0
+                    if (existingTasks.length === 0) {
+                        return 0;
+                    }
+
+                    // 如果有冲突，计算下一个可用的Y位置
+                    const maxY = Math.max(...existingTasks.map(task => task.canvas_position_y || 0));
+                    return maxY + 1;
+                },
+
+                // 获取指定时间段的任务
+                getTasksAtTimeSlot(date, startTime) {
+                    const tasks = [];
+
+                    // 遍历当前周的所有任务
+                    for (const day in this.weekSchedule) {
+                        if (day === date) {
+                            for (const slotKey in this.weekSchedule[day]) {
+                                const event = this.weekSchedule[day][slotKey];
+                                if (event && event.start_time) {
+                                    // 检查时间重叠
+                                    if (this.isTimeOverlap(event.start_time, event.duration || 60, startTime, 60)) {
+                                        tasks.push(event);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return tasks;
+                },
+
+                // 检查时间重叠
+                isTimeOverlap(startTime1, duration1, startTime2, duration2) {
+                    const [h1, m1] = startTime1.split(':').map(Number);
+                    const [h2, m2] = startTime2.split(':').map(Number);
+
+                    const start1 = h1 * 60 + m1;
+                    const end1 = start1 + duration1;
+                    const start2 = h2 * 60 + m2;
+                    const end2 = start2 + duration2;
+
+                    return !(end1 <= start2 || end2 <= start1);
+                },
+
+                // 更新内存中的事件数据
+                updateEventInMemory(updatedEvent) {
+                    console.log('🔄 Updating event in memory:', updatedEvent.id);
+
+                    // 先从原位置移除事件
+                    for (const day in this.weekSchedule) {
+                        for (const slotKey in this.weekSchedule[day]) {
+                            const event = this.weekSchedule[day][slotKey];
+                            if (event && event.id === updatedEvent.id) {
+                                delete this.weekSchedule[day][slotKey];
+                                break;
+                            }
+                        }
+                    }
+
+                    // 添加到新位置
+                    const date = updatedEvent.event_date;
+                    const timeSlot = updatedEvent.time_slot;
+
+                    if (!this.weekSchedule[date]) {
+                        this.weekSchedule[date] = {};
+                    }
+
+                    this.weekSchedule[date][timeSlot] = updatedEvent;
+                    console.log('✅ Event updated in memory:', { date, timeSlot, eventId: updatedEvent.id });
+                },
+
+                // 重新渲染单个卡片
+                renderSingleCardV3(event, domElement) {
+                    console.log('🎨 Re-rendering single card:', event.id);
+
+                    try {
+                        // 检查DOM元素是否有效
+                        if (!domElement || !domElement.style) {
+                            console.error('❌ Invalid DOM element passed to renderSingleCardV3:', domElement);
+                            console.log('🔄 Falling back to full reload...');
+                            this.loadWeekSchedule();
+                            return;
+                        }
+
+                        // 更新DOM元素的事件数据
+                        domElement.eventData = event;
+
+                        // 重新计算位置
+                        const duration = event.duration || 60;
+                        const heightPx = Math.max((duration / 10) * 10 * this.v3ZoomLevel, 20 * this.v3ZoomLevel);
+
+                        let topPx = 0;
+                        if (event.start_time) {
+                            const [hours, minutes] = event.start_time.split(':').map(Number);
+                            const totalMinutes = hours * 60 + minutes;
+                            const relativeMinutes = totalMinutes - (this.v3TimeStart * 60);
+                            topPx = Math.max(0, (relativeMinutes / 10) * 10 * this.v3ZoomLevel);
+                        }
+
+                        // 更新样式
+                        domElement.style.top = topPx + 'px';
+                        domElement.style.height = heightPx + 'px';
+
+                        // 更新卡片内容（如果需要）
+                        const nameElement = domElement.querySelector('.task-card-title');
+                        if (nameElement && event.name) {
+                            nameElement.textContent = event.name;
+                        }
+
+                        console.log('✅ Single card re-rendered:', { eventId: event.id, topPx, heightPx });
+
+                    } catch (error) {
+                        console.error('❌ Error re-rendering single card:', error);
+                        // 如果单个重新渲染失败，回退到完整重新加载
+                        this.loadWeekSchedule();
+                    }
+                },
+
+                // V3拖拽初始化
+                initV3DragAndDrop() {
+                    console.log('🎯 Initializing V3 drag and drop...');
+
+                    // 初始化简化的原生拖拽系统
+                    this.initV3NativeDrag();
+
+                    // 初始化待定区域拖拽
+                    this.initV3PendingAreaDrag();
+                },
+
+                // 初始化V3原生拖拽系统
+                initV3NativeDrag() {
+                    const self = this;
+
+                    // 为每个卡片添加原生拖拽事件（只处理未初始化的卡片）
+                    const cards = document.querySelectorAll('.task-card-v3:not([data-drag-initialized])');
+                    console.log('🎯 Initializing drag for', cards.length, 'new V3 cards');
+
+                    cards.forEach(card => {
+                        // 标记为已初始化
+                        card.setAttribute('data-drag-initialized', 'true');
+
+                        // 设置为可拖拽
+                        card.draggable = true;
+                        card.style.cursor = 'grab';
+
+                        card.addEventListener('dragstart', function(e) {
+                            console.log('🎯 V3 native drag started for card:', card.dataset.eventId);
+
+                            self.isDragging = true;
+                            self.draggedEventId = card.dataset.eventId;
+
+                            // 设置拖拽数据
+                            e.dataTransfer.setData('text/plain', card.dataset.eventId);
+                            e.dataTransfer.effectAllowed = 'move';
+
+                            // 创建完全透明的拖拽图像，隐藏预览效果
+                            const emptyImg = new Image();
+                            emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+                            e.dataTransfer.setDragImage(emptyImg, 0, 0);
+
+                            // 视觉反馈 - 原卡片半透明
+                            card.style.opacity = '0.3';
+                            card.style.cursor = 'grabbing';
+                        });
+
+                        card.addEventListener('dragend', function(e) {
+                            console.log('🎯 V3 native drag ended');
+
+                            self.isDragging = false;
+                            self.draggedEventId = null;
+                            self.hideSnapIndicator();
+
+                            // 恢复视觉效果
+                            card.style.opacity = '1';
+                            card.style.cursor = 'grab';
+                        });
+                    });
+
+                    // 为每个日期列设置放置目标
+                    const dayColumns = document.querySelectorAll('.day-column-v3');
+                    dayColumns.forEach((column, index) => {
+                        column.addEventListener('dragover', function(e) {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+
+                            // 实时更新吸附指示器，基于鼠标位置
+                            self.snapToGrid(e.clientY);
+
+                            // 视觉反馈
+                            column.classList.add('day-column-v3-over');
+                        });
+
+                        column.addEventListener('dragleave', function(e) {
+                            column.classList.remove('day-column-v3-over');
+                        });
+
+                        column.addEventListener('drop', function(e) {
+                            e.preventDefault();
+                            column.classList.remove('day-column-v3-over');
+
+                            // 防止重复处理
+                            if (self.dropProcessing) {
+                                console.log('🚫 Drop already processing in drop event, ignoring');
+                                return;
+                            }
+
+                            const eventId = e.dataTransfer.getData('text/plain');
+                            if (eventId && self.draggedEventId === eventId) {
+                                console.log('🎯 Card dropped in column', index, 'eventId:', eventId);
+
+                                // 模拟Sortable事件对象
+                                const mockEvt = {
+                                    item: { getAttribute: () => eventId },
+                                    to: column,
+                                    originalEvent: e
+                                };
+
+                                self.handleV3CardDrop(mockEvt);
+                            }
+                        });
+                    });
+                },
+
+                // 初始化V3侧边栏拖拽
+                initV3SidebarDrag() {
+                    // 初始化Domain侧边栏
+                    const domainPool = document.getElementById('domain-pool-v3');
+                    if (domainPool && !domainPool.sortableInstance) {
+                        domainPool.sortableInstance = Sortable.create(domainPool, {
+                            group: {
+                                name: 'v3-sidebar',
+                                pull: 'clone',
+                                put: false
+                            },
+                            sort: false,
+                            animation: 150,
+
+                            onEnd: (evt) => {
+                                // 从侧边栏拖拽到网格的逻辑
+                                if (evt.to.classList.contains('day-column-v3')) {
+                                    this.handleSidebarToGridDrop(evt);
+                                }
+                            }
+                        });
+                    }
+
+                    // 初始化ActivityType侧边栏
+                    const typePool = document.getElementById('type-pool-v3');
+                    if (typePool && !typePool.sortableInstance) {
+                        typePool.sortableInstance = Sortable.create(typePool, {
+                            group: {
+                                name: 'v3-sidebar',
+                                pull: 'clone',
+                                put: false
+                            },
+                            sort: false,
+                            animation: 150,
+
+                            onEnd: (evt) => {
+                                if (evt.to.classList.contains('day-column-v3')) {
+                                    this.handleSidebarToGridDrop(evt);
+                                }
+                            }
+                        });
+                    }
+                },
+
+                // 处理侧边栏到网格的拖拽
+                handleSidebarToGridDrop(evt) {
+                    console.log('🎯 Sidebar to grid drop', evt);
+
+                    // 获取节点信息
+                    const nodeId = evt.item.getAttribute('data-node-id');
+                    const nodeName = evt.item.getAttribute('data-node-name');
+                    const nodeType = evt.item.getAttribute('data-node-type');
+
+                    if (nodeId && nodeName && nodeType) {
+                        // 设置选中节点
+                        this.selectedNode = {
+                            id: parseInt(nodeId),
+                            name: nodeName,
+                            type: nodeType
+                        };
+
+                        // 计算放置位置
+                        const dropPosition = this.calculateDropPosition(evt);
+                        if (dropPosition) {
+                            // 自动创建事件
+                            this.createEventFromDrop(dropPosition);
+                        }
+                    }
+                },
+
+                // 从拖拽位置创建事件
+                async createEventFromDrop(dropPosition) {
+                    const eventData = {
+                        name: this.selectedNode.name,
+                        event_date: dropPosition.date,
+                        time_slot: dropPosition.timeSlot,
+                        domain_id: this.selectedNode.type === 'domain' ? this.selectedNode.id : null,
+                        activity_type_id: this.selectedNode.type === 'type' ? this.selectedNode.id : null,
+                        schedule_id: null,
+                        notes: '',
+                        status: 'planned',
+                        // V3 字段
+                        duration: 60,
+                        start_time: this.formatTimeForAPI(dropPosition.startTime),
+                        is_precise: false,
+                        canvas_position_y: dropPosition.canvasY
+                    };
+
+                    try {
+                        const response = await fetch('/api/events/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(eventData)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        console.log('✅ Event created from sidebar drop');
+                        await this.loadWeekSchedule();
+
+                    } catch (error) {
+                        console.error('❌ Error creating event from drop:', error);
+                        alert('创建事件失败: ' + error.message);
+                    }
+                },
+
+
+                // 初始化V3待定区域拖拽
+                initV3PendingAreaDrag() {
+                    const pendingArea = document.getElementById('pending-cards-v3');
+
+                    if (pendingArea && !pendingArea.sortableInstance) {
+                        pendingArea.sortableInstance = Sortable.create(pendingArea, {
+                            group: 'v3-tasks',
+                            animation: 150,
+
+                            onEnd: (evt) => {
+                                console.log('V3 pending drag end');
+                                this.handleV3PendingDrop(evt);
+                            }
+                        });
+                    }
+                },
+
+                // 处理V3卡片拖拽结束
+                async handleV3CardDrop(evt) {
+                    // 防止重复触发
+                    if (this.dropProcessing) {
+                        console.log('🚫 Drop already processing, ignoring duplicate');
+                        return;
+                    }
+                    this.dropProcessing = true;
+
+                    console.log('🎯 Handling V3 card drop', evt);
+
+                    try {
+                        // 获取被拖拽的卡片信息
+                        const draggedElement = evt.item;
+                        const eventId = draggedElement.getAttribute('data-event-id');
+
+                        if (!eventId) {
+                            console.error('❌ No event ID found on dragged element');
+                            return;
+                        }
+
+                        // 计算新的位置信息
+                        const newPosition = this.calculateDropPosition(evt);
+                        if (!newPosition) {
+                            console.error('❌ Could not calculate drop position');
+                            return;
+                        }
+
+                        console.log('📍 Calculated new position:', newPosition);
+
+                        // 更新事件数据
+                        const updateData = {
+                            event_date: newPosition.date,
+                            time_slot: newPosition.timeSlot,
+                            start_time: this.formatTimeForAPI(newPosition.startTime),
+                            canvas_position_y: newPosition.canvasY
+                        };
+
+                        // 发送API请求更新事件
+                        console.log('📤 Sending update data:', updateData);
+                        const response = await fetch(`/api/events/${eventId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(updateData)
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('❌ API Error Details:', {
+                                status: response.status,
+                                statusText: response.statusText,
+                                body: errorText
+                            });
+                            throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
+                        }
+
+                        console.log('✅ Event updated successfully');
+
+                        // 调试信息：检查事件数据
+                        console.log('🔍 Debug info:', {
+                            eventId: eventId,
+                            'evt.item': evt.item,
+                            'evt.item.eventData': evt.item.eventData,
+                            'domElement': evt.item
+                        });
+
+                        // 直接更新内存中的事件数据，避免重新加载导致卡片消失
+                        const updatedEvent = {
+                            ...evt.item.eventData,
+                            id: eventId, // 确保使用正确的事件ID
+                            event_date: newPosition.date,
+                            start_time: newPosition.startTime,
+                            time_slot: newPosition.timeSlot,
+                            canvas_position_y: newPosition.canvasY
+                        };
+
+                        // 更新内存中的事件
+                        this.updateEventInMemory(updatedEvent);
+
+                        // 只重新渲染这个特定的卡片，而不是整个周视图
+                        this.renderSingleCardV3(updatedEvent, evt.item);
+
+                        // 隐藏吸附指示器
+                        this.hideSnapIndicator();
+
+                    } catch (error) {
+                        console.error('❌ Error handling V3 card drop:', error);
+                        alert('移动卡片失败: ' + error.message);
+
+                        // 恢复原位置
+                        await this.loadWeekSchedule();
+                    } finally {
+                        // 重置防抖标志
+                        this.dropProcessing = false;
+                    }
+                },
+
+                // 处理V3待定区域拖拽结束
+                async handleV3PendingDrop(evt) {
+                    console.log('🎯 Handling V3 pending drop', evt);
+
+                    try {
+                        // 获取被拖拽的卡片信息
+                        const draggedElement = evt.item;
+                        const eventId = draggedElement.getAttribute('data-event-id');
+
+                        if (eventId) {
+                            // 从网格拖拽到待定区域 - 移除时间信息
+                            const updateData = {
+                                start_time: null,
+                                is_precise: false,
+                                canvas_position_y: 0
+                            };
+
+                            const response = await fetch(`/api/events/${eventId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(updateData)
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            console.log('✅ Event moved to pending area');
+                            await this.loadWeekSchedule();
+                        } else {
+                            // 待定区域内的重新排序
+                            console.log('📋 Reordered pending cards');
+                        }
+
+                    } catch (error) {
+                        console.error('❌ Error handling V3 pending drop:', error);
+                        alert('移动到待定区域失败: ' + error.message);
+                        await this.loadWeekSchedule();
+                    }
+                },
+
+                // 编辑V3任务
+                editEventV3(eventId) {
+                    console.log('🎯 Editing V3 event:', eventId);
+
+                    // 找到要编辑的事件
+                    let eventToEdit = null;
+                    for (const day in this.weekSchedule) {
+                        for (const slotKey in this.weekSchedule[day]) {
+                            const event = this.weekSchedule[day][slotKey];
+                            if (event && event.id === eventId) { // 添加null检查
+                                eventToEdit = event;
+                                break;
+                            }
+                        }
+                        if (eventToEdit) break;
+                    }
+
+                    if (!eventToEdit) {
+                        console.error('Event not found:', eventId);
+                        return;
+                    }
+
+                    // 确保time_slot有效，如果无效则根据start_time重新计算
+                    let validTimeSlot = eventToEdit.time_slot;
+                    if (!validTimeSlot || ![21, 22, 51, 52, 71].includes(parseInt(validTimeSlot))) {
+                        if (eventToEdit.start_time) {
+                            validTimeSlot = this.getTimeSlotFromTime(eventToEdit.start_time);
+                            console.log('🔧 Fixed invalid time_slot for editing, calculated from start_time:', eventToEdit.start_time, '->', validTimeSlot);
+                        } else {
+                            validTimeSlot = 21; // 默认值
+                            console.log('🔧 Fixed invalid time_slot for editing, using default:', validTimeSlot);
+                        }
+                    }
+
+                    // 设置编辑模式的数据
+                    this.editingEvent = {
+                        id: eventToEdit.id,
+                        name: eventToEdit.name || '',
+                        event_date: eventToEdit.event_date,
+                        time_slot: validTimeSlot,
+                        domain_id: eventToEdit.domain_id || '',
+                        activity_type_id: eventToEdit.activity_type_id || '',
+                        schedule_id: eventToEdit.schedule_id || '',
+                        notes: eventToEdit.notes || '',
+                        // V3 字段
+                        duration: eventToEdit.duration || 60,
+                        start_time: eventToEdit.start_time || null,
+                        is_precise: eventToEdit.is_precise || false,
+                        canvas_position_y: eventToEdit.canvas_position_y || 0
+                    };
+
+                    this.showEditEventModal = true;
+                },
+
+                // 格式化时间为API格式
+                formatTimeForAPI(timeStr) {
+                    if (!timeStr || timeStr === 'None' || timeStr === null) {
+                        return null;
+                    }
+
+                    // 如果是简单的HH:MM格式，转换为HH:MM:SS
+                    if (timeStr.split(':').length === 2) {
+                        return timeStr + ':00';
+                    }
+
+                    return timeStr;
+                },
+
+                // V3网格点击处理
+                handleV3GridClick(event, day) {
+                    console.log('🎯 V3 Grid clicked:', day, event);
+
+                    // 确保不是卡片点击事件 - 检查整个事件路径
+                    if (event.target.closest('.task-card-v3')) {
+                        console.log('🚫 Clicked on task card, ignoring grid click');
+                        return;
+                    }
+
+                    // 计算点击位置对应的时间
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
+                    const relativeY = event.clientY - canvasRect.top - 60; // 减去header高度
+
+                    // 计算对应的时间（吸附到10分钟网格）- 修复时间计算
+                    const minutesFromStart = Math.max(0, Math.round(relativeY / (10 * this.v3ZoomLevel)) * 10);
+                    const clickHour = this.v3TimeStart + Math.floor(minutesFromStart / 60);
+                    const clickMinute = minutesFromStart % 60;
+
+                    console.log('🎯 Calculated time:', clickHour + ':' + clickMinute.toString().padStart(2, '0'));
+
+                    // 计算起始时间 - 模糊和精确卡片都有起始时间，只是精度不同
+                    const startTimeStr = clickHour + ':' + clickMinute.toString().padStart(2, '0');
+
+                    console.log('🎯 Selected node for V3 creation:', this.selectedNode);
+
+                    // 根据是否有选中节点决定创建方式（采用V2的逻辑）
+                    if (this.selectedNode.id) {
+                        // 有选中节点 - 自动填入信息
+                        this.newEvent = {
+                            name: this.selectedNode.name, // 🎯 自动填入选中节点名称
+                            event_date: day,
+                            time_slot: this.getTimeSlotFromTime(startTimeStr),
+                            domain_id: this.selectedNode.type === 'domain' ? this.selectedNode.id : '',
+                            activity_type_id: this.selectedNode.type === 'type' ? this.selectedNode.id : '',
+                            schedule_id: '',
+                            notes: '',
+                            // V3 新字段
+                            duration: 60,
+                            start_time: startTimeStr,
+                            is_precise: false,
+                            canvas_position_y: 0
+                        };
+                        console.log('✨ Created V3 event with selected node:', this.selectedNode.name);
+                    } else {
+                        // 没有选中节点 - 空白创建
+                        this.newEvent = {
+                            name: '',
+                            event_date: day,
+                            time_slot: this.getTimeSlotFromTime(startTimeStr),
+                            domain_id: '',
+                            activity_type_id: '',
+                            schedule_id: '',
+                            notes: '',
+                            // V3 新字段
+                            duration: 60,
+                            start_time: startTimeStr,
+                            is_precise: false,
+                            canvas_position_y: 0
+                        };
+                        console.log('📄 Created V3 event from blank');
+                    }
+
+                    this.showNewEventModal = true;
+                },
+
+                // 根据小时获取对应的时间槽
+                getTimeSlotFromHour(hour) {
+                    if (hour >= 7 && hour < 10) return 21; // 上午第1时段
+                    if (hour >= 10 && hour < 13) return 22; // 上午第2时段
+                    if (hour >= 13 && hour < 16) return 51; // 下午第1时段
+                    if (hour >= 16 && hour < 19) return 52; // 下午第2时段
+                    if (hour >= 19 && hour <= 23) return 71; // 晚上时段
+                    return 21; // 默认
+                },
+
+                // 根据时间字符串获取对应的时间槽
+                getTimeSlotFromTime(timeStr) {
+                    if (!timeStr) return 21;
+
+                    const [hours] = timeStr.split(':').map(Number);
+                    return this.getTimeSlotFromHour(hours);
+                },
+
+                // 获取时间槽的显示名称
+                getTimeSlotDisplay(timeStr) {
+                    console.log('🎯 getTimeSlotDisplay called with:', timeStr);
+
+                    if (!timeStr || timeStr === 'None' || timeStr === null) {
+                        console.log('🎯 No time string, returning "未设置"');
+                        return '未设置';
+                    }
+
+                    const timeSlot = this.getTimeSlotFromTime(timeStr);
+                    console.log('🎯 Calculated time slot:', timeSlot);
+
+                    const timeSlotNames = {
+                        21: "上午第1时段 (7-10点)",
+                        22: "上午第2时段 (10-13点)",
+                        51: "下午第1时段 (13-16点)",
+                        52: "下午第2时段 (16-19点)",
+                        71: "晚上时段 (19-23点)"
+                    };
+
+                    const result = timeSlotNames[timeSlot] || `时段${timeSlot}`;
+                    console.log('🎯 Time slot display result:', result);
+                    return result;
+                },
+
+                // 更新时间槽（当起始时间改变时调用）
+                updateTimeSlot() {
+                    console.log('🕐 updateTimeSlot called, start_time:', this.newEvent.start_time);
+                    if (this.newEvent.start_time) {
+                        const oldTimeSlot = this.newEvent.time_slot;
+                        this.newEvent.time_slot = this.getTimeSlotFromTime(this.newEvent.start_time);
+                        console.log('🕐 Updated time slot from', oldTimeSlot, 'to:', this.newEvent.time_slot, 'for time:', this.newEvent.start_time);
+                    } else {
+                        console.log('🕐 No start_time set, keeping current time_slot:', this.newEvent.time_slot);
+                    }
+                },
+
+                // 更新编辑事件的时间槽
+                updateEditingTimeSlot() {
+                    if (this.editingEvent.start_time) {
+                        this.editingEvent.time_slot = this.getTimeSlotFromTime(this.editingEvent.start_time);
+                        console.log('🔧 Updated editing time slot to:', this.editingEvent.time_slot, 'for time:', this.editingEvent.start_time);
+                    }
+                },
+
+                // 计算结束时间
+                calculateEndTime(startTime, duration) {
+                    if (!startTime || !duration) return '';
+
+                    const [hours, minutes] = startTime.split(':').map(Number);
+                    const totalMinutes = hours * 60 + minutes + parseInt(duration);
+                    const endHours = Math.floor(totalMinutes / 60);
+                    const endMinutes = totalMinutes % 60;
+
+                    return endHours.toString().padStart(2, '0') + ':' + endMinutes.toString().padStart(2, '0');
+                },
+
+                // V3智能吸附系统
+                snapToV3Grid(mouseY, canvasRect) {
+                    // 计算相对于画布的Y坐标
+                    const relativeY = mouseY - canvasRect.top - 60; // 减去header高度
+
+                    // 吸附到最近的10分钟网格
+                    const gridUnit = 10 * this.v3ZoomLevel; // 10分钟网格的像素高度
+                    const snappedY = Math.round(relativeY / gridUnit) * gridUnit;
+
+                    // 转换为时间 - 修复时间计算
+                    const minutesFromStart = Math.round(snappedY / (10 * this.v3ZoomLevel)) * 10;
+                    const hour = this.v3TimeStart + Math.floor(minutesFromStart / 60);
+                    const minute = minutesFromStart % 60;
+
+                    // 确保在有效时间范围内
+                    if (hour < this.v3TimeStart || hour > this.v3TimeEnd) {
+                        return null;
+                    }
+
+                    return {
+                        y: snappedY + 60, // 加回header高度
+                        time: hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'),
+                        hour: hour,
+                        minute: minute
+                    };
+                },
+
+                // 显示V3吸附指示器
+                showV3SnapIndicator(snapData) {
+                    if (!snapData) {
+                        this.v3SnapIndicator.visible = false;
+                        return;
+                    }
+
+                    this.v3SnapIndicator.visible = true;
+                    this.v3SnapIndicator.y = snapData.y;
+                    this.v3SnapIndicator.tooltip = `📍 ${snapData.time}`;
+                },
+
+                // 隐藏V3吸附指示器
+                hideV3SnapIndicator() {
+                    this.v3SnapIndicator.visible = false;
+                },
+
+                // 清理拖拽实例
+                cleanupDragInstances() {
+                    // 清理所有现有的sortable实例
+                    document.querySelectorAll('.sortable-initialized').forEach(el => {
+                        if (el.sortableInstance) {
+                            el.sortableInstance.destroy();
+                        }
+                        el.classList.remove('sortable-initialized');
+                    });
+                },
+
+                // 缩放控制
+                adjustZoom(delta) {
+                    const newZoom = this.v3ZoomLevel + delta;
+                    if (newZoom >= 0.5 && newZoom <= 2.0) {
+                        this.v3ZoomLevel = newZoom;
+                        console.log('🔍 V3 zoom adjusted to:', Math.round(newZoom * 100) + '%');
+
+                        // 重新渲染画布
+                        this.$nextTick(() => {
+                            this.rerenderV3Canvas();
+                        });
+                    }
+                },
+
+                // 计算画布高度
+                getCanvasHeight() {
+                    const hours = this.v3TimeEnd - this.v3TimeStart + 1; // 修复：17小时（包含23:00）
+                    return (hours * 60 * this.v3ZoomLevel) + 60; // 17小时 × 60px/小时 × 缩放 + 顶部padding
+                },
+
+                // 重新渲染V3画布
+                rerenderV3Canvas() {
+                    if (!this.isV3Mode) return;
+
+                    const timeAxisContainer = document.querySelector('[x-html="renderTimeAxis()"]');
+                    const gridLinesContainer = document.querySelector('[x-html="renderGridLines()"]');
+
+                    if (timeAxisContainer) {
+                        timeAxisContainer.innerHTML = this.renderTimeAxis();
+                    }
+
+                    if (gridLinesContainer) {
+                        gridLinesContainer.innerHTML = this.renderGridLines();
+                    }
+
+                    // 重新渲染所有日期列的卡片
+                    this.weekDates.forEach(day => {
+                        const dayCardContainer = document.querySelector(`[x-html="renderDayCardsV3('${day}')"]`);
+                        if (dayCardContainer) {
+                            dayCardContainer.innerHTML = this.renderDayCardsV3(day);
+                        }
+                    });
+
+                    console.log('🎨 V3 canvas re-rendered with zoom:', this.v3ZoomLevel);
+
+                    // 重新初始化拖拽功能（缩放后卡片需要重新绑定事件）
+                    this.$nextTick(() => {
+                        this.initV3DragAndDrop();
+                    });
+                },
                 
                 // 新增：刷新活动池方法
                 refreshActivityPool() {
@@ -4063,15 +5815,20 @@
                         const toggleIcon = hasChildren ? (isCollapsed ? '▶' : '▼') : '';
                         const nodeKey = `${nodeType}-${node.id}`;
 
+                        // 检查是否被选中（使用V2兼容的selectedNode方式）
+                        const isSelected = this.selectedNode.id === node.id && this.selectedNode.type === nodeType;
+                        const selectedClass = isSelected ? 'tree-node-selected' : '';
+
                         let html = `
                             <div class="tree-node">
-                                <div class="tree-node-content draggable"
+                                <div class="tree-node-content draggable ${selectedClass}"
                                      data-node-type="${nodeType}"
                                      data-node-id="${node.id}"
-                                     data-node-name="${node.name}">
+                                     data-node-name="${node.name}"
+                                     onclick="window.laeAppInstance.selectNode('${nodeType}', ${node.id}, '${node.name}'); event.stopPropagation();">
                                     ${hasChildren ?
                                         `<button class="tree-toggle ${isCollapsed ? '' : 'expanded'}"
-                                                onclick="window.laeAppInstance.toggleNode('${nodeKey}')">
+                                                onclick="window.laeAppInstance.toggleNode('${nodeKey}'); event.stopPropagation();">
                                             ${toggleIcon}
                                         </button>` :
                                         `<div style="width: 16px; margin-right: 0.5rem;"></div>`
@@ -4112,6 +5869,40 @@
                     }
 
                     // 触发重新渲染
+                    this.refreshTrigger++;
+                },
+
+                // 选择侧边栏节点 - V3版本，兼容V2的selectedNode系统
+                selectNode(nodeType, nodeId, nodeName) {
+                    console.log('🎯 V3 Selecting node:', nodeType, nodeId, nodeName);
+
+                    // 如果点击的是已选中的节点，则取消选择
+                    if (this.selectedNode.id === nodeId && this.selectedNode.type === nodeType) {
+                        this.selectedNode = { id: null, name: '', type: '', description: '' };
+                        this.selectedDomainId = null;
+                        this.selectedActivityTypeId = null;
+                        console.log('🎯 Deselected node');
+                    } else {
+                        // 选中新节点，同时更新V2兼容字段和V3专用字段
+                        this.selectedNode = {
+                            id: nodeId,
+                            name: nodeName,
+                            type: nodeType,
+                            description: ''
+                        };
+
+                        if (nodeType === 'domain') {
+                            this.selectedDomainId = nodeId;
+                            this.selectedActivityTypeId = null;
+                        } else if (nodeType === 'type') {
+                            this.selectedActivityTypeId = nodeId;
+                            this.selectedDomainId = null;
+                        }
+
+                        console.log('🎯 Selected node:', this.selectedNode);
+                    }
+
+                    // 触发重新渲染以更新选中状态样式
                     this.refreshTrigger++;
                 },
 
@@ -4600,6 +6391,27 @@
                 getTimeSlotName(timeSlotValue) {
                     const slot = this.timeSlots.find(s => s.value === timeSlotValue);
                     return slot ? slot.name.replace('第1时段', '1').replace('第2时段', '2').replace('时段', '') : `时段${timeSlotValue}`;
+                },
+
+                // 格式化时间为API标准格式
+                formatTimeForAPI(timeString) {
+                    if (!timeString) return null;
+
+                    console.log('🕐 Formatting time for API:', timeString, 'length:', timeString.length);
+
+                    // 确保时间格式为HH:MM:SS（API期望的格式）
+                    if (timeString.length === 4 || timeString.length === 5) { // "8:40" or "08:40" -> "08:40:00"
+                        const [hours, minutes] = timeString.split(':');
+                        const formatted = hours.padStart(2, '0') + ':' + minutes.padStart(2, '0') + ':00';
+                        console.log('🕐 Formatted result:', formatted);
+                        return formatted;
+                    } else if (timeString.length === 8) { // "08:40:00" 已经是正确格式
+                        console.log('🕐 Already in correct format:', timeString);
+                        return timeString;
+                    }
+
+                    console.warn('🚨 Unexpected time format:', timeString, 'length:', timeString.length);
+                    return timeString;
                 }
             }
         }

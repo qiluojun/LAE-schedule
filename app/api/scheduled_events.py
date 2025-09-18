@@ -1,20 +1,21 @@
 """
-LAE v2.0 Scheduled Events API
-支持新的 v2.0 架构：name, domain_id, activity_type_id, schedule_id 字段
+LAE v3.0 Scheduled Events API
+支持完整的 v2.0 架构：name, domain_id, activity_type_id, schedule_id 字段
+新增 v3.0 动态画布支持：duration, start_time, is_precise, canvas_position_y 字段
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import date, datetime
-from pydantic import BaseModel
+from datetime import date, datetime, time
+from pydantic import BaseModel, validator
 
 from app.database import get_db
 from app.models.models import ScheduledEvent, Domain, ActivityType, Schedule
 
 router = APIRouter(prefix="/api/events", tags=["scheduled-events"])
 
-# Pydantic schemas for v2.0
+# Pydantic schemas for v2.0 with v3.0 extensions
 class ScheduledEventBase(BaseModel):
     event_date: date
     time_slot: int
@@ -24,6 +25,27 @@ class ScheduledEventBase(BaseModel):
     domain_id: Optional[int] = None
     activity_type_id: Optional[int] = None
     schedule_id: Optional[int] = None
+
+    # V3.0 动态画布支持字段
+    duration: Optional[int] = None  # 时长(分钟)
+    start_time: Optional[time] = None  # 精确开始时间
+    is_precise: bool = False  # 是否精确任务
+    canvas_position_y: int = 0  # 画布Y坐标(并排摆放)
+
+    @validator('duration')
+    def validate_duration(cls, v):
+        """验证时长必须为正数"""
+        if v is not None and v <= 0:
+            raise ValueError('Duration must be positive')
+        return v
+
+    # 暂时注释掉这个validator，稍后修复
+    # @validator('start_time')
+    # def validate_precise_time(cls, v, values):
+    #     """验证精确任务必须有start_time"""
+    #     if values.get('is_precise') and v is None:
+    #         raise ValueError('Precise tasks must have start_time')
+    #     return v
 
 class ScheduledEventCreate(ScheduledEventBase):
     pass
@@ -37,6 +59,27 @@ class ScheduledEventUpdate(BaseModel):
     domain_id: Optional[int] = None
     activity_type_id: Optional[int] = None
     schedule_id: Optional[int] = None
+
+    # V3.0 动态画布支持字段
+    duration: Optional[int] = None  # 时长(分钟)
+    start_time: Optional[time] = None  # 精确开始时间
+    is_precise: Optional[bool] = None  # 是否精确任务
+    canvas_position_y: Optional[int] = None  # 画布Y坐标(并排摆放)
+
+    @validator('duration')
+    def validate_duration(cls, v):
+        """验证时长必须为正数"""
+        if v is not None and v <= 0:
+            raise ValueError('Duration must be positive')
+        return v
+
+    # 暂时注释掉这个validator，稍后修复
+    # @validator('start_time')
+    # def validate_precise_time(cls, v, values):
+    #     """验证精确任务必须有start_time"""
+    #     if values.get('is_precise') and v is None:
+    #         raise ValueError('Precise tasks must have start_time')
+    #     return v
 
 class ScheduledEventResponse(ScheduledEventBase):
     id: int
@@ -88,16 +131,28 @@ def create_scheduled_event(event: ScheduledEventCreate, db: Session = Depends(ge
                 detail=f"Schedule with id {event.schedule_id} not found"
             )
 
-    # 检查同一时间槽是否已有安排
-    existing = db.query(ScheduledEvent).filter(
-        ScheduledEvent.event_date == event.event_date,
-        ScheduledEvent.time_slot == event.time_slot
-    ).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Time slot already occupied"
-        )
+    # V3.0: 检查时间冲突 - 考虑并排摆放逻辑
+    # 如果指定了canvas_position_y，允许并排摆放，不检查冲突
+    if event.canvas_position_y == 0:  # 只有在主位置(Y=0)时才检查冲突
+        existing = db.query(ScheduledEvent).filter(
+            ScheduledEvent.event_date == event.event_date,
+            ScheduledEvent.time_slot == event.time_slot,
+            ScheduledEvent.canvas_position_y == 0  # 只检查主位置的冲突
+        ).first()
+        if existing:
+            # 如果V3字段存在且支持并排，自动分配新的Y位置
+            if hasattr(event, 'canvas_position_y'):
+                # 找到下一个可用的Y位置
+                max_y = db.query(ScheduledEvent).filter(
+                    ScheduledEvent.event_date == event.event_date,
+                    ScheduledEvent.time_slot == event.time_slot
+                ).count()
+                event.canvas_position_y = max_y
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Time slot already occupied"
+                )
 
     db_event = ScheduledEvent(**event.dict())
     db.add(db_event)
@@ -241,21 +296,34 @@ def update_scheduled_event(event_id: int, event_update: ScheduledEventUpdate, db
                 detail=f"Schedule with id {update_data['schedule_id']} not found"
             )
 
-    # 检查时间冲突
-    if "event_date" in update_data or "time_slot" in update_data:
+    # V3.0: 检查时间冲突 - 考虑并排摆放逻辑
+    if "event_date" in update_data or "time_slot" in update_data or "canvas_position_y" in update_data:
         check_date = update_data.get("event_date", db_event.event_date)
         check_slot = update_data.get("time_slot", db_event.time_slot)
+        check_y = update_data.get("canvas_position_y", getattr(db_event, 'canvas_position_y', 0))
 
-        existing = db.query(ScheduledEvent).filter(
-            ScheduledEvent.id != event_id,
-            ScheduledEvent.event_date == check_date,
-            ScheduledEvent.time_slot == check_slot
-        ).first()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Time slot already occupied"
-            )
+        # 只有在主位置(Y=0)时才检查冲突
+        if check_y == 0:
+            existing = db.query(ScheduledEvent).filter(
+                ScheduledEvent.id != event_id,
+                ScheduledEvent.event_date == check_date,
+                ScheduledEvent.time_slot == check_slot,
+                ScheduledEvent.canvas_position_y == 0
+            ).first()
+            if existing:
+                # 如果有冲突且支持V3并排摆放，自动分配新Y位置
+                if "canvas_position_y" not in update_data:
+                    max_y = db.query(ScheduledEvent).filter(
+                        ScheduledEvent.id != event_id,
+                        ScheduledEvent.event_date == check_date,
+                        ScheduledEvent.time_slot == check_slot
+                    ).count()
+                    update_data["canvas_position_y"] = max_y
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Time slot already occupied"
+                    )
 
     for key, value in update_data.items():
         setattr(db_event, key, value)

@@ -67,7 +67,7 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
     for event in events:
         day_key = event.event_date.isoformat()
         if day_key in schedule_grid:
-            schedule_grid[day_key]["slots"][event.time_slot] = {
+            event_data = {
                 "id": event.id,
                 "activity_id": event.activity_id,
                 "activity_name": event.activity.name if event.activity else None,
@@ -77,8 +77,25 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
                 "schedule_id": getattr(event, 'schedule_id', None),  # v2.1 新字段
                 "goal": event.goal,
                 "notes": event.notes,
-                "status": event.status
+                "status": event.status,
+                # V3.0 动态画布支持字段
+                "duration": getattr(event, 'duration', None),
+                "start_time": getattr(event, 'start_time', None).strftime("%H:%M") if getattr(event, 'start_time', None) else None,
+                "is_precise": getattr(event, 'is_precise', False),
+                "canvas_position_y": getattr(event, 'canvas_position_y', 0),
+                "display_time": event.get_display_time() if hasattr(event, 'get_display_time') else None,
+                "effective_duration": event.get_effective_duration() if hasattr(event, 'get_effective_duration') else 60
             }
+
+            # V3.0: 支持并排摆放 - 如果Y位置非0，需要特殊处理
+            if event_data["canvas_position_y"] > 0:
+                # 对于并排任务，将其存储在列表中而不是直接覆盖
+                if not isinstance(schedule_grid[day_key]["slots"][event.time_slot], list):
+                    existing = schedule_grid[day_key]["slots"][event.time_slot]
+                    schedule_grid[day_key]["slots"][event.time_slot] = [existing] if existing else []
+                schedule_grid[day_key]["slots"][event.time_slot].append(event_data)
+            else:
+                schedule_grid[day_key]["slots"][event.time_slot] = event_data
     
     return {
         "week_start": start_date.isoformat(),
@@ -125,7 +142,14 @@ def get_month_schedule(year: int, month: int, db: Session = Depends(get_db)):
             "time_slot": event.time_slot,
             "goal": event.goal,
             "notes": event.notes,
-            "status": event.status
+            "status": event.status,
+            # V3.0 动态画布支持字段
+            "duration": getattr(event, 'duration', None),
+            "start_time": getattr(event, 'start_time', None).strftime("%H:%M") if getattr(event, 'start_time', None) else None,
+            "is_precise": getattr(event, 'is_precise', False),
+            "canvas_position_y": getattr(event, 'canvas_position_y', 0),
+            "display_time": event.get_display_time() if hasattr(event, 'get_display_time') else None,
+            "effective_duration": event.get_effective_duration() if hasattr(event, 'get_effective_duration') else 60
         })
     
     # 构建月视图数据
