@@ -9,8 +9,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
-    <!-- SortableJS -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     
     <style>
         .time-slot {
@@ -31,88 +29,13 @@
             border-color: #c3e6cb;
         }
         .activity-card {
-            cursor: grab;
+            cursor: pointer;
             transition: transform 0.2s;
         }
         .activity-card:hover {
             transform: translateY(-2px);
         }
-        .activity-card:active {
-            cursor: grabbing;
-        }
-        .sortable-chosen {
-            opacity: 0.8;
-            transform: rotate(3deg);
-        }
-        .sortable-drag {
-            opacity: 0.8;
-            transform: rotate(5deg);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-        }
-        .sortable-ghost {
-            opacity: 0.4;
-            background: #e3f2fd;
-            border: 2px dashed #2196f3;
-        }
 
-        /* V3 拖拽样式 */
-        .sortable-ghost-v3 {
-            opacity: 0.3;
-            background: rgba(33, 150, 243, 0.1);
-            border: 2px dashed #2196f3;
-            transform: scale(1.05);
-        }
-        .sortable-chosen-v3 {
-            opacity: 0.8;
-            transform: scale(1.02) rotate(1deg);
-            z-index: 1000;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-        .sortable-drag-v3 {
-            opacity: 0.9;
-            transform: rotate(3deg);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
-        }
-        .sortable-fallback-v3 {
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid #2196f3;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-
-        /* 吸附指示器样式 */
-        .snap-indicator {
-            position: absolute;
-            left: 80px; /* 对齐到网格区域 */
-            right: 0;
-            height: 2px;
-            background: #ff5722;
-            z-index: 2000;
-            display: none;
-            pointer-events: none;
-            box-shadow: 0 0 10px rgba(255, 87, 34, 0.6);
-        }
-        .snap-indicator.active {
-            display: block;
-            animation: snapPulse 0.3s ease-in-out;
-        }
-        @keyframes snapPulse {
-            0% { opacity: 0.5; transform: scaleY(0.5); }
-            50% { opacity: 1; transform: scaleY(1.5); }
-            100% { opacity: 0.8; transform: scaleY(1); }
-        }
-        .time-slot.sortable-over {
-            background-color: #e8f5e8;
-            border-color: #4caf50;
-            border-width: 3px;
-            transform: scale(1.02);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-        }
-        .day-column-v3.sortable-over,
-        .day-column-v3-over {
-            background-color: rgba(33, 150, 243, 0.1);
-            box-shadow: inset 0 0 15px rgba(33, 150, 243, 0.3);
-            border: 2px dashed #2196f3;
-        }
         .scheduled-event {
             background-color: #fff3cd;
             border: 1px solid #ffc107;
@@ -730,6 +653,54 @@
                 padding: 6px;
             }
         }
+
+        /* 新的点击选择模式样式 */
+        .selection-blue-line {
+            position: absolute;
+            left: 80px; /* 对齐到网格区域 */
+            right: 0;
+            height: 3px;
+            background: #2196f3;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .selection-blue-line.active {
+            animation: bluePulse 0.3s ease-in-out;
+        }
+
+        @keyframes bluePulse {
+            0% { opacity: 0.5; transform: scaleY(0.5); }
+            50% { opacity: 1; transform: scaleY(1.5); }
+            100% { opacity: 0.9; transform: scaleY(1); }
+        }
+
+        /* 列选中状态样式 */
+        .day-column-selected {
+            background-color: rgba(33, 150, 243, 0.08) !important;
+            box-shadow: inset 0 0 15px rgba(33, 150, 243, 0.2);
+            border-left: 3px solid #2196f3;
+            border-right: 3px solid #2196f3;
+        }
+
+        /* V3画布的列选中状态 */
+        .day-column-v3.selected {
+            background-color: rgba(33, 150, 243, 0.08) !important;
+            box-shadow: inset 0 0 15px rgba(33, 150, 243, 0.2);
+            border-left: 3px solid #2196f3;
+            border-right: 3px solid #2196f3;
+        }
+
+        /* 点击区域提示样式 */
+        .clickable-area {
+            cursor: pointer;
+        }
+
+        .clickable-area:hover {
+            background-color: rgba(33, 150, 243, 0.03);
+        }
     </style>
 </head>
 <body>
@@ -1002,7 +973,7 @@
                                             <!-- 7天列容器 -->
                                             <div class="days-container">
                                                 <template x-for="(day, index) in weekDates" :key="day">
-                                                    <div class="day-column-v3" @click="handleV3GridClick($event, day)">
+                                                    <div class="day-column-v3" @click="handleV3GridClick($event, day)" @dblclick="handleV3GridDoubleClick($event, day)">
                                                         <!-- 当天的任务卡片 -->
                                                         <div x-html="renderDayCardsV3(day)">
                                                         </div>
@@ -1728,14 +1699,19 @@
                     tooltip: ''
                 },
 
-                // V3 拖拽状态
-                isDragging: false,
-                draggedEventId: null,
-                dropProcessing: false, // 防止重复处理drop事件
+                // V3 状态
                 lastSnapTime: null, // 保存最后吸附的时间
                 v3TimeStart: 7, // V3开始时间(小时) - 7:00
                 v3TimeEnd: 23, // V3结束时间(小时) - 23:00
                 v3ZoomLevel: 1.0, // V3缩放级别 (0.5 - 2.0)
+
+                // 新的点击选择状态
+                selectedPosition: {
+                    date: null,      // 选中的日期
+                    timeMinute: null, // 选中的时间(分钟，从7:00开始计算)
+                    column: null,    // 选中的列索引
+                    isSelected: false // 是否有选中状态
+                },
                 
                 // 汇总视图数据
                 summaryStats: null,
@@ -1930,6 +1906,15 @@
                     
                     // 创建全局引用以便HTML onclick访问
                     window.laeAppInstance = this;
+
+                    // 添加全局点击监听器来清除选择状态
+                    document.addEventListener('click', (event) => {
+                        // 如果点击的不是V3画布区域，清除选择状态
+                        if (!event.target.closest('.week-canvas-v3') &&
+                            !event.target.closest('.day-column-v3')) {
+                            this.clearSelectionIndicators();
+                        }
+                    });
                     
                     // 强制重置所有模态框状态
                     this.forceCloseModal();
@@ -2725,7 +2710,8 @@
                             console.log('Time slot elements:', document.querySelectorAll('.time-slot').length);
                             
                             setTimeout(() => {
-                                this.initDragAndDrop();
+                                // 拖拽功能已移除
+                                console.log('点击选择模式已就绪');
                             }, 200);
                         });
                     } else if (view === 'month') {
@@ -2766,14 +2752,9 @@
                         // 同时加载当前周的Schedule时间条数据
                         await this.loadWeeklySchedules();
 
-                        // 在V3模式下重新初始化拖拽功能
+                        // V3模式拖拽功能已移除，改为点击选择模式
                         if (this.isV3Mode) {
-                            this.$nextTick(() => {
-                                setTimeout(() => {
-                                    this.initV3DragAndDrop();
-                                    console.log('🔄 重新初始化V3拖拽功能');
-                                }, 100);
-                            });
+                            console.log('V3点击选择模式已就绪');
                         }
                     } catch (error) {
                         console.error('加载周日程失败:', error);
@@ -2792,14 +2773,14 @@
                     this.updateWeekDates();
                     await this.loadWeekSchedule();
 
-                    // 确保切换周后重新初始化拖拽功能
+                    // 切换周后重新渲染视图
                     this.$nextTick(() => {
                         this.rerenderWeekView();
                         console.log('周数据切换后重新渲染网格和时间条');
 
                         setTimeout(() => {
-                            this.initDragAndDrop();
-                            console.log('周数据切换后重新初始化拖拽');
+                            // 拖拽功能已移除
+                            console.log('周数据切换后点击选择模式已就绪');
                         }, 200);
                     });
                 },
@@ -2810,14 +2791,14 @@
                     this.updateWeekDates();
                     await this.loadWeekSchedule();
 
-                    // 确保切换周后重新初始化拖拽功能
+                    // 切换周后重新渲染视图
                     this.$nextTick(() => {
                         this.rerenderWeekView();
                         console.log('周数据切换后重新渲染网格和时间条');
 
                         setTimeout(() => {
-                            this.initDragAndDrop();
-                            console.log('周数据切换后重新初始化拖拽');
+                            // 拖拽功能已移除
+                            console.log('周数据切换后点击选择模式已就绪');
                         }, 200);
                     });
                 },
@@ -3025,7 +3006,7 @@
                         const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
                         if (gridContainer) {
                             gridContainer.innerHTML = this.renderFullWeekGrid();
-                            setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                            // 拖拽功能已移除
                         }
 
                     } catch (error) {
@@ -3060,7 +3041,7 @@
                             const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
                             if (gridContainer) {
                                 gridContainer.innerHTML = this.renderFullWeekGrid();
-                                setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                                // 拖拽功能已移除
                             }
 
                         } catch (error) {
@@ -3070,415 +3051,9 @@
                     }
                 },
 
-                // 拖拽功能初始化
-                initDragAndDrop() {
-                    console.log('Initializing drag and drop...', 'Current view:', this.currentView);
-                    
-                    // 只在周视图中初始化拖拽功能
-                    if (this.currentView !== 'week') {
-                        console.log('Drag and drop skipped - not in week view');
-                        return;
-                    }
-                    
-                    const self = this; // 保存Alpine.js实例引用
-                    
-                    // 只清理时间槽的Sortable实例，保留活动池的实例
-                    document.querySelectorAll('.time-slot.sortable-initialized').forEach(el => {
-                        if (el.sortableInstance) {
-                            el.sortableInstance.destroy();
-                        }
-                        el.classList.remove('sortable-initialized');
-                    });
-                    
-                    console.log('Cleaned up time slot sortable instances');
-                    
-                    // v2.1: 不再需要活动池拖拽，改为选择+点击模式
-                    // this.initActivityPoolDragAndDrop();
-                    
-                    // 初始化时间槽的拖拽接收
-                    const timeSlots = document.querySelectorAll('.time-slot');
-                    console.log('Found time slots:', timeSlots.length);
-                    
-                    timeSlots.forEach((slot, index) => {
-                        if (!slot.classList.contains('sortable-initialized')) {
-                            console.log(`Initializing time slot ${index}:`, {
-                                date: slot.getAttribute('data-date'),
-                                timeSlot: slot.getAttribute('data-time-slot')
-                            });
-                            
-                            slot.sortableInstance = Sortable.create(slot, {
-                                group: {
-                                    name: 'activities',
-                                    pull: true,  // 允许从时间槽拖出（用于删除或移动）
-                                    put: true    // 允许拖入时间槽
-                                },
-                                animation: 200,
-                                ghostClass: 'sortable-ghost',
-                                chosenClass: 'sortable-chosen',
-                                dragClass: 'sortable-drag',
-                                // 提高拖拽判断精度的参数
-                                tolerance: 'pointer', // 使用鼠标指针位置判断，而不是元素中心
-                                forceAutoScrollFallback: false, // 禁用自动滚动避免位置计算错误
-                                fallbackTolerance: 5, // 设置容差为5px，提高精度
-                                // 当拖拽到时间槽（包括移动现有事件）
-                                onAdd: function(evt) {
-                                    console.log('Drop event triggered on slot:', evt.to);
-                                    const activityId = evt.item.getAttribute('data-activity-id');
-                                    const eventId = evt.item.getAttribute('data-event-id');
-                                    const eventName = evt.item.getAttribute('data-event-name');
-                                    const domainId = evt.item.getAttribute('data-domain-id');
-                                    const activityTypeId = evt.item.getAttribute('data-activity-type-id');
-                                    const date = evt.to.getAttribute('data-date');
-                                    const timeSlot = parseInt(evt.to.getAttribute('data-time-slot'));
-                                    const fromPool = evt.from.id === 'activity-pool';
-                                    const fromTimeSlot = evt.from.classList.contains('time-slot');
-
-                                    // 详细的拖拽判断调试信息
-                                    const targetRect = evt.to.getBoundingClientRect();
-                                    const isValidTarget = self.validateDropTarget(evt.to, targetRect);
-
-                                    console.log('🎯 拖拽位置判断详情:', {
-                                        目标槽位: `${date} ${timeSlot}`,
-                                        目标元素: evt.to,
-                                        目标元素标签: evt.to.tagName,
-                                        目标元素类名: evt.to.className,
-                                        目标元素ID: evt.to.id,
-                                        目标元素可见性: window.getComputedStyle(evt.to).display,
-                                        目标元素透明度: window.getComputedStyle(evt.to).opacity,
-                                        目标元素边界: {
-                                            left: targetRect.left,
-                                            right: targetRect.right,
-                                            top: targetRect.top,
-                                            bottom: targetRect.bottom,
-                                            width: targetRect.width,
-                                            height: targetRect.height
-                                        },
-                                        目标有效性: isValidTarget ? '✅ 有效' : '❌ 无效',
-                                        拖拽源: fromPool ? '活动池' : '时间槽',
-                                        活动ID: activityId,
-                                        所有时间槽元素数量: document.querySelectorAll('.time-slot').length,
-                                        当前时间槽是否存在: document.querySelector(`[data-date="${date}"][data-time-slot="${timeSlot}"]`) !== null
-                                    });
-
-                                    // 验证目标元素有效性
-                                    if (!isValidTarget) {
-                                        console.warn('⚠️ 检测到无效目标元素，尝试重新定位...');
-
-                                        // 尝试找到最近的有效时间槽
-                                        const validTarget = self.findNearestValidTimeSlot(evt.originalEvent);
-                                        if (validTarget) {
-                                            console.log('🔄 重定向到有效目标:', validTarget);
-                                            // 更新目标数据
-                                            evt.to = validTarget;
-                                            const newDate = validTarget.getAttribute('data-date');
-                                            const newTimeSlot = parseInt(validTarget.getAttribute('data-time-slot'));
-
-                                            console.log('🎯 重定向后的目标:', {
-                                                原目标: `${date} ${timeSlot}`,
-                                                新目标: `${newDate} ${newTimeSlot}`
-                                            });
-
-                                            // 使用新的目标数据
-                                            if (fromTimeSlot) {
-                                                self.handleMoveEvent(activityId, evt.from.getAttribute('data-date'),
-                                                    parseInt(evt.from.getAttribute('data-time-slot')), newDate, newTimeSlot);
-                                            } else {
-                                                self.handleDrop(activityId, newDate, newTimeSlot);
-                                            }
-                                        } else {
-                                            console.error('❌ 找不到有效的目标时间槽');
-                                            evt.item.remove();
-                                        }
-                                        return;
-                                    }
-
-                                    console.log('🎯 Drop details:', {
-                                        activityId, eventId, eventName, domainId, activityTypeId,
-                                        date, timeSlot, fromPool, fromTimeSlot,
-                                        fromElement: evt.from.id || evt.from.className
-                                    });
-
-                                    // v2.1兼容性：检查是否有有效的拖拽数据
-                                    const hasActivityId = activityId && activityId !== '';
-                                    const hasEventId = eventId && eventId !== '';
-                                    const hasEventName = eventName && eventName !== '';
-
-                                    if ((!hasActivityId && !hasEventId) || !date || !timeSlot) {
-                                        console.error('❌ Missing required drop data:', {
-                                            hasActivityId, hasEventId, hasEventName, date, timeSlot
-                                        });
-                                        evt.item.remove();
-                                        return;
-                                    }
-
-                                    // 立即移除拖拽的临时元素
-                                    evt.item.remove();
-
-                                    // 如果是从其他时间槽移动过来的，需要先删除原有事件
-                                    if (fromTimeSlot) {
-                                        const originalDate = evt.from.getAttribute('data-date');
-                                        const originalTimeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
-                                        console.log('🔄 Moving event from time slot:', originalDate, originalTimeSlot);
-
-                                        if (hasEventId) {
-                                            // v2.1事件移动：使用事件ID
-                                            self.handleMoveEventV2(eventId, originalDate, originalTimeSlot, date, timeSlot);
-                                        } else {
-                                            // v1事件移动：使用活动ID
-                                            self.handleMoveEvent(activityId, originalDate, originalTimeSlot, date, timeSlot);
-                                        }
-                                    } else {
-                                        // 从活动池拖拽，创建新事件（仅v1兼容）
-                                        if (hasActivityId) {
-                                            self.handleDrop(activityId, date, timeSlot);
-                                        } else {
-                                            console.warn('⚠️ 尝试从活动池拖拽v2.1事件，这不应该发生');
-                                        }
-                                    }
-                                },
-                                // 当从时间槽拖拽元素出去时
-                                onRemove: function(evt) {
-                                    console.log('Item removed from time slot:', {
-                                        from: evt.from,
-                                        to: evt.to,
-                                        toId: evt.to.id,
-                                        toClass: evt.to.className
-                                    });
-
-                                    // 如果拖拽到活动池，视为删除操作
-                                    if (evt.to.id === 'activity-pool') {
-                                        const date = evt.from.getAttribute('data-date');
-                                        const timeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
-                                        const eventId = evt.item.getAttribute('data-event-id');
-
-                                        console.log('Deleting event by drag to pool:', { date, timeSlot, eventId });
-
-                                        if (eventId) {
-                                            self.deleteEventById(eventId);
-                                        } else {
-                                            // 备用删除方法：根据日期和时间槽查找并删除
-                                            self.deleteEventByDateSlot(date, timeSlot);
-                                        }
-                                    }
-                                    // 如果是移动到其他时间槽，onAdd会处理
-                                }
-                            });
-                            slot.classList.add('sortable-initialized');
-                        }
-                    });
-                    
-                    console.log('Drag and drop initialization completed');
-                },
+                // 拖拽功能已移除，改为点击选择模式
                 
-                // 只初始化时间槽的拖拽功能（用于动态重新初始化）
-                initTimeSlotsDragAndDrop() {
-                    if (this.currentView !== 'week') {
-                        return;
-                    }
-
-                    console.log('Re-initializing time slots drag and drop...');
-                    const self = this;
-
-                    // 更彻底的清理时间槽的Sortable实例
-                    document.querySelectorAll('.time-slot').forEach(el => {
-                        if (el.sortableInstance) {
-                            console.log('Destroying existing sortable instance for time slot');
-                            try {
-                                el.sortableInstance.destroy();
-                            } catch (e) {
-                                console.warn('Error destroying sortable instance:', e);
-                            }
-                            el.sortableInstance = null;
-                        }
-                        el.classList.remove('sortable-initialized');
-
-                        // 清理可能残留的拖拽相关的CSS类
-                        el.classList.remove('sortable-chosen', 'sortable-drag', 'sortable-ghost', 'sortable-over');
-                    });
-
-                    // 等待一帧来确保DOM完全清理
-                    requestAnimationFrame(() => {
-                        // 重新初始化时间槽的拖拽接收
-                        const timeSlots = document.querySelectorAll('.time-slot');
-                        console.log('Re-initializing time slots:', timeSlots.length);
-
-                        timeSlots.forEach((slot, index) => {
-                            if (!slot.classList.contains('sortable-initialized')) {
-                                slot.sortableInstance = Sortable.create(slot, {
-                                    group: {
-                                        name: 'activities',
-                                        pull: true,
-                                        put: true
-                                    },
-                                    animation: 200,
-                                    ghostClass: 'sortable-ghost',
-                                    chosenClass: 'sortable-chosen',
-                                    dragClass: 'sortable-drag',
-                                    // 提高拖拽判断精度的参数
-                                    tolerance: 'pointer', // 使用鼠标指针位置判断，而不是元素中心
-                                    forceAutoScrollFallback: false, // 禁用自动滚动避免位置计算错误
-                                    fallbackTolerance: 5, // 设置容差为5px，提高精度
-                                    onAdd: function(evt) {
-                                        console.log('Drop event triggered on slot:', evt.to);
-
-                                        // 检测拖拽源类型
-                                        const activityId = evt.item.getAttribute('data-activity-id');
-                                        const nodeType = evt.item.getAttribute('data-node-type'); // domain 或 type
-                                        const nodeId = evt.item.getAttribute('data-node-id');
-                                        const nodeName = evt.item.getAttribute('data-node-name');
-
-                                        const date = evt.to.getAttribute('data-date');
-                                        const timeSlot = parseInt(evt.to.getAttribute('data-time-slot'));
-                                        const fromPool = evt.from.id === 'activity-pool';
-                                        const fromSidebar = evt.from.id === 'domain-pool' || evt.from.id === 'type-pool';
-                                        const fromTimeSlot = evt.from.classList.contains('time-slot');
-
-                                        console.log('🎯 拖拽源检测:', {
-                                            来源类型: fromSidebar ? '侧边栏' : (fromPool ? '活动池' : '时间槽'),
-                                            activityId,
-                                            nodeType,
-                                            nodeId,
-                                            nodeName,
-                                            目标: `${date} ${timeSlot}`
-                                        });
-
-                                        // 详细的拖拽判断调试信息
-                                        const targetRect = evt.to.getBoundingClientRect();
-                                        const isValidTarget = self.validateDropTarget(evt.to, targetRect);
-
-                                        console.log('🎯 拖拽位置判断详情:', {
-                                            目标槽位: `${date} ${timeSlot}`,
-                                            目标有效性: isValidTarget ? '✅ 有效' : '❌ 无效',
-                                            目标元素: evt.to,
-                                            目标元素标签: evt.to.tagName,
-                                            目标元素类名: evt.to.className,
-                                            目标元素ID: evt.to.id,
-                                            目标元素可见性: window.getComputedStyle(evt.to).display,
-                                            目标元素透明度: window.getComputedStyle(evt.to).opacity,
-                                            目标元素边界: {
-                                                left: targetRect.left,
-                                                right: targetRect.right,
-                                                top: targetRect.top,
-                                                bottom: targetRect.bottom,
-                                                width: targetRect.width,
-                                                height: targetRect.height
-                                            },
-                                            拖拽源: fromPool ? '活动池' : '时间槽',
-                                            活动ID: activityId,
-                                            所有时间槽元素数量: document.querySelectorAll('.time-slot').length,
-                                            当前时间槽是否存在: document.querySelector(`[data-date="${date}"][data-time-slot="${timeSlot}"]`) !== null
-                                        });
-
-                                        // 验证目标元素有效性
-                                        if (!isValidTarget) {
-                                            console.warn('⚠️ 检测到无效目标元素，尝试重新定位...');
-
-                                            // 尝试找到最近的有效时间槽
-                                            const validTarget = self.findNearestValidTimeSlot(evt.originalEvent);
-                                            if (validTarget) {
-                                                console.log('🔄 重定向到有效目标:', validTarget);
-                                                const newDate = validTarget.getAttribute('data-date');
-                                                const newTimeSlot = parseInt(validTarget.getAttribute('data-time-slot'));
-
-                                                console.log('🎯 重定向后的目标:', {
-                                                    原目标: `${date} ${timeSlot}`,
-                                                    新目标: `${newDate} ${newTimeSlot}`
-                                                });
-
-                                                evt.item.remove();
-
-                                                // 使用新的目标数据
-                                                if (fromTimeSlot) {
-                                                    self.handleMoveEvent(activityId, evt.from.getAttribute('data-date'),
-                                                        parseInt(evt.from.getAttribute('data-time-slot')), newDate, newTimeSlot);
-                                                } else {
-                                                    self.handleDrop(activityId, newDate, newTimeSlot);
-                                                }
-                                            } else {
-                                                console.error('❌ 找不到有效的目标时间槽');
-                                                evt.item.remove();
-                                            }
-                                            return;
-                                        }
-
-                                        console.log('Drop details:', {
-                                            activityId, date, timeSlot,
-                                            fromPool, fromTimeSlot,
-                                            fromElement: evt.from.id || evt.from.className
-                                        });
-
-                                        // 验证必要数据
-                                        if (fromSidebar) {
-                                            // 侧边栏拖拽：需要nodeType, nodeId, nodeName
-                                            if (!nodeType || !nodeId || !nodeName || !date || !timeSlot) {
-                                                console.error('Missing required sidebar drop data:', {
-                                                    nodeType, nodeId, nodeName, date, timeSlot
-                                                });
-                                                evt.item.remove();
-                                                return;
-                                            }
-                                        } else {
-                                            // 活动池/时间槽拖拽：需要activityId
-                                            if (!activityId || !date || !timeSlot) {
-                                                console.error('Missing required drop data');
-                                                evt.item.remove();
-                                                return;
-                                            }
-                                        }
-
-                                        evt.item.remove();
-
-                                        // 处理不同来源的拖拽
-                                        if (fromSidebar) {
-                                            // 从侧边栏拖拽，创建基于domain/type的事件
-                                            console.log('🎯 Processing sidebar drop');
-                                            self.handleSidebarDrop(nodeType, nodeId, nodeName, date, timeSlot);
-                                        } else if (fromTimeSlot) {
-                                            // 从其他时间槽移动过来的，需要先删除原有事件
-                                            const originalDate = evt.from.getAttribute('data-date');
-                                            const originalTimeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
-                                            console.log('Moving from time slot:', originalDate, originalTimeSlot);
-
-                                            // 处理移动事件（先删除原事件，再创建新事件）
-                                            self.handleMoveEvent(activityId, originalDate, originalTimeSlot, date, timeSlot);
-                                        } else {
-                                            // 从活动池拖拽，创建新事件
-                                            self.handleDrop(activityId, date, timeSlot);
-                                        }
-                                    },
-                                    onRemove: function(evt) {
-                                        console.log('Item removed from time slot:', {
-                                            from: evt.from,
-                                            to: evt.to,
-                                            toId: evt.to.id,
-                                            toClass: evt.to.className
-                                        });
-
-                                        // 如果拖拽到活动池，视为删除操作
-                                        if (evt.to.id === 'activity-pool') {
-                                            const date = evt.from.getAttribute('data-date');
-                                            const timeSlot = parseInt(evt.from.getAttribute('data-time-slot'));
-                                            const eventId = evt.item.getAttribute('data-event-id');
-
-                                            console.log('Deleting event by drag to pool:', { date, timeSlot, eventId });
-
-                                            if (eventId) {
-                                                self.deleteEventById(eventId);
-                                            } else {
-                                                // 备用删除方法：根据日期和时间槽查找并删除
-                                                self.deleteEventByDateSlot(date, timeSlot);
-                                            }
-                                        }
-                                        // 如果是移动到其他时间槽，onAdd会处理
-                                    }
-                                });
-                                slot.classList.add('sortable-initialized');
-                            }
-                        });
-
-                        console.log('Time slots drag and drop re-initialization completed');
-                    });
-                },
+                // 拖拽功能已移除，改为点击选择模式
                 
                 // 新增：处理事件移动（从一个时间槽移动到另一个时间槽）
                 async handleMoveEvent(activityId, fromDate, fromTimeSlot, toDate, toTimeSlot) {
@@ -3500,7 +3075,7 @@
                             if (gridContainer) {
                                 gridContainer.innerHTML = this.renderFullWeekGrid();
                                 setTimeout(() => {
-                                    this.initTimeSlotsDragAndDrop();
+                                    // 拖拽功能已移除
                                 }, 100);
                             }
                             return;
@@ -3543,7 +3118,7 @@
                             console.log('Week grid re-rendered after move');
 
                             setTimeout(() => {
-                                this.initTimeSlotsDragAndDrop();
+                                // 拖拽功能已移除
                                 // 确保活动池状态正常
                                 this.verifyActivityPoolState();
                             }, 100);
@@ -3562,7 +3137,7 @@
                         if (gridContainer) {
                             gridContainer.innerHTML = this.renderFullWeekGrid();
                             setTimeout(() => {
-                                this.initTimeSlotsDragAndDrop();
+                                // 拖拽功能已移除
                             }, 100);
                         }
                     }
@@ -3586,7 +3161,7 @@
                             const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
                             if (gridContainer) {
                                 gridContainer.innerHTML = this.renderFullWeekGrid();
-                                setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                                // 拖拽功能已移除
                             }
                             return;
                         }
@@ -3636,7 +3211,7 @@
                             console.log('Week grid re-rendered after v2.1 move');
 
                             setTimeout(() => {
-                                this.initTimeSlotsDragAndDrop();
+                                // 拖拽功能已移除
                             }, 100);
                         }
 
@@ -3652,7 +3227,7 @@
                         const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
                         if (gridContainer) {
                             gridContainer.innerHTML = this.renderFullWeekGrid();
-                            setTimeout(() => { this.initTimeSlotsDragAndDrop(); }, 100);
+                            // 拖拽功能已移除
                         }
                     }
                 },
@@ -3674,7 +3249,7 @@
                         if (gridContainer) {
                             gridContainer.innerHTML = this.renderFullWeekGrid();
                             setTimeout(() => {
-                                this.initTimeSlotsDragAndDrop();
+                                // 拖拽功能已移除
                                 // 确保活动池状态正常
                                 this.verifyActivityPoolState();
                             }, 100);
@@ -3858,7 +3433,7 @@
 
                             // 只重新初始化时间槽的拖拽功能，不影响活动池
                             setTimeout(() => {
-                                this.initTimeSlotsDragAndDrop();
+                                // 拖拽功能已移除
                                 // 确保活动池状态正常
                                 this.verifyActivityPoolState();
                             }, 100);
@@ -4413,13 +3988,13 @@
                 switchGridMode() {
                     console.log('🔄 Switching grid mode to:', this.isV3Mode ? 'V3' : 'V2');
 
-                    // 重新初始化相应的拖拽功能
+                    // 拖拽功能已移除，改为点击选择模式
                     this.$nextTick(() => {
                         if (this.isV3Mode) {
-                            this.initV3DragAndDrop();
                             this.scrollToCurrentTime();
+                            console.log('V3点击选择模式已就绪');
                         } else {
-                            this.initDragAndDrop();
+                            console.log('V2点击选择模式已就绪');
                         }
                     });
                 },
@@ -4573,7 +4148,8 @@
                              style="top: ${topPx}px; height: ${heightPx}px;"
                              data-event-id="${event.id}"
                              data-duration="${duration}"
-                             onclick="window.laeAppInstance.editEventV3(${event.id}); event.stopPropagation(); return false;">
+                             ondblclick="window.laeAppInstance.editEventV3(${event.id}); event.stopPropagation(); return false;"
+                             onclick="event.stopPropagation(); return false;">
                             <div class="task-card-title">
                                 ${event.name || event.activity_name || '未命名任务'}
                             </div>
@@ -4830,154 +4406,11 @@
                     }
                 },
 
-                // V3拖拽初始化
-                initV3DragAndDrop() {
-                    console.log('🎯 Initializing V3 drag and drop...');
+                // V3拖拽功能已移除，改为点击选择模式
 
-                    // 初始化简化的原生拖拽系统
-                    this.initV3NativeDrag();
+                // V3拖拽功能已移除，改为点击选择模式
 
-                    // 初始化待定区域拖拽
-                    this.initV3PendingAreaDrag();
-                },
-
-                // 初始化V3原生拖拽系统
-                initV3NativeDrag() {
-                    const self = this;
-
-                    // 为每个卡片添加原生拖拽事件（只处理未初始化的卡片）
-                    const cards = document.querySelectorAll('.task-card-v3:not([data-drag-initialized])');
-                    console.log('🎯 Initializing drag for', cards.length, 'new V3 cards');
-
-                    cards.forEach(card => {
-                        // 标记为已初始化
-                        card.setAttribute('data-drag-initialized', 'true');
-
-                        // 设置为可拖拽
-                        card.draggable = true;
-                        card.style.cursor = 'grab';
-
-                        card.addEventListener('dragstart', function(e) {
-                            console.log('🎯 V3 native drag started for card:', card.dataset.eventId);
-
-                            self.isDragging = true;
-                            self.draggedEventId = card.dataset.eventId;
-
-                            // 设置拖拽数据
-                            e.dataTransfer.setData('text/plain', card.dataset.eventId);
-                            e.dataTransfer.effectAllowed = 'move';
-
-                            // 创建完全透明的拖拽图像，隐藏预览效果
-                            const emptyImg = new Image();
-                            emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
-                            e.dataTransfer.setDragImage(emptyImg, 0, 0);
-
-                            // 视觉反馈 - 原卡片半透明
-                            card.style.opacity = '0.3';
-                            card.style.cursor = 'grabbing';
-                        });
-
-                        card.addEventListener('dragend', function(e) {
-                            console.log('🎯 V3 native drag ended');
-
-                            self.isDragging = false;
-                            self.draggedEventId = null;
-                            self.hideSnapIndicator();
-
-                            // 恢复视觉效果
-                            card.style.opacity = '1';
-                            card.style.cursor = 'grab';
-                        });
-                    });
-
-                    // 为每个日期列设置放置目标
-                    const dayColumns = document.querySelectorAll('.day-column-v3');
-                    dayColumns.forEach((column, index) => {
-                        column.addEventListener('dragover', function(e) {
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = 'move';
-
-                            // 实时更新吸附指示器，基于鼠标位置
-                            self.snapToGrid(e.clientY);
-
-                            // 视觉反馈
-                            column.classList.add('day-column-v3-over');
-                        });
-
-                        column.addEventListener('dragleave', function(e) {
-                            column.classList.remove('day-column-v3-over');
-                        });
-
-                        column.addEventListener('drop', function(e) {
-                            e.preventDefault();
-                            column.classList.remove('day-column-v3-over');
-
-                            // 防止重复处理
-                            if (self.dropProcessing) {
-                                console.log('🚫 Drop already processing in drop event, ignoring');
-                                return;
-                            }
-
-                            const eventId = e.dataTransfer.getData('text/plain');
-                            if (eventId && self.draggedEventId === eventId) {
-                                console.log('🎯 Card dropped in column', index, 'eventId:', eventId);
-
-                                // 模拟Sortable事件对象
-                                const mockEvt = {
-                                    item: { getAttribute: () => eventId },
-                                    to: column,
-                                    originalEvent: e
-                                };
-
-                                self.handleV3CardDrop(mockEvt);
-                            }
-                        });
-                    });
-                },
-
-                // 初始化V3侧边栏拖拽
-                initV3SidebarDrag() {
-                    // 初始化Domain侧边栏
-                    const domainPool = document.getElementById('domain-pool-v3');
-                    if (domainPool && !domainPool.sortableInstance) {
-                        domainPool.sortableInstance = Sortable.create(domainPool, {
-                            group: {
-                                name: 'v3-sidebar',
-                                pull: 'clone',
-                                put: false
-                            },
-                            sort: false,
-                            animation: 150,
-
-                            onEnd: (evt) => {
-                                // 从侧边栏拖拽到网格的逻辑
-                                if (evt.to.classList.contains('day-column-v3')) {
-                                    this.handleSidebarToGridDrop(evt);
-                                }
-                            }
-                        });
-                    }
-
-                    // 初始化ActivityType侧边栏
-                    const typePool = document.getElementById('type-pool-v3');
-                    if (typePool && !typePool.sortableInstance) {
-                        typePool.sortableInstance = Sortable.create(typePool, {
-                            group: {
-                                name: 'v3-sidebar',
-                                pull: 'clone',
-                                put: false
-                            },
-                            sort: false,
-                            animation: 150,
-
-                            onEnd: (evt) => {
-                                if (evt.to.classList.contains('day-column-v3')) {
-                                    this.handleSidebarToGridDrop(evt);
-                                }
-                            }
-                        });
-                    }
-                },
+                // V3拖拽功能已移除，改为点击选择模式
 
                 // 处理侧边栏到网格的拖拽
                 handleSidebarToGridDrop(evt) {
@@ -5273,7 +4706,7 @@
                     return timeStr;
                 },
 
-                // V3网格点击处理
+                // V3网格单击处理 - 选择位置并显示蓝线
                 handleV3GridClick(event, day) {
                     console.log('🎯 V3 Grid clicked:', day, event);
 
@@ -5286,21 +4719,140 @@
                     // 计算点击位置对应的时间
                     const rect = event.currentTarget.getBoundingClientRect();
                     const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
-                    const relativeY = event.clientY - canvasRect.top - 60; // 减去header高度
+                    const canvasContainer = document.querySelector('.canvas-grid-container');
 
-                    // 计算对应的时间（吸附到10分钟网格）- 修复时间计算
+                    // 🔧 修复：加入滚动偏移量
+                    const scrollTop = canvasContainer ? canvasContainer.scrollTop : 0;
+                    const relativeY = event.clientY - canvasRect.top - 60 + scrollTop; // 减去header高度，加上滚动偏移
+
+                    // 🔍 调试信息
+                    console.log('🔍 Click position debug:', {
+                        clientY: event.clientY,
+                        canvasTop: canvasRect.top,
+                        scrollTop: scrollTop,
+                        relativeY: relativeY,
+                        zoomLevel: this.v3ZoomLevel
+                    });
+
+                    // 计算对应的时间（吸附到最近的10分钟网格）
                     const minutesFromStart = Math.max(0, Math.round(relativeY / (10 * this.v3ZoomLevel)) * 10);
-                    const clickHour = this.v3TimeStart + Math.floor(minutesFromStart / 60);
-                    const clickMinute = minutesFromStart % 60;
 
-                    console.log('🎯 Calculated time:', clickHour + ':' + clickMinute.toString().padStart(2, '0'));
+                    // 🔧 临时修复：添加10分钟偏差矫正（仅在标准状态下）
+                    const correctedMinutes = this.v3ZoomLevel === 1.0 ? minutesFromStart + 10 : minutesFromStart;
+                    const clickHour = this.v3TimeStart + Math.floor(correctedMinutes / 60);
+                    const clickMinute = correctedMinutes % 60;
 
-                    // 计算起始时间 - 模糊和精确卡片都有起始时间，只是精度不同
+                    // 更新选择状态
+                    this.selectedPosition = {
+                        date: day,
+                        timeMinute: minutesFromStart,
+                        column: this.weekDates.indexOf(day),
+                        isSelected: true
+                    };
+
+                    console.log('🎯 Selected position:', {
+                        date: day,
+                        time: clickHour + ':' + clickMinute.toString().padStart(2, '0'),
+                        timeMinute: minutesFromStart,
+                        column: this.selectedPosition.column
+                    });
+
+                    // 显示蓝线和列选中状态
+                    this.showSelectionIndicators();
+                },
+
+                // 显示选择指示器（蓝线和列选中状态）
+                showSelectionIndicators() {
+                    if (!this.selectedPosition.isSelected) return;
+
+                    console.log('🎯 Showing selection indicators');
+
+                    // 移除之前的选择状态
+                    this.clearSelectionIndicators();
+
+                    // 显示蓝线
+                    this.$nextTick(() => {
+                        const canvasContainer = document.querySelector('.canvas-grid-container');
+                        if (canvasContainer) {
+                            // 移除现有的蓝线
+                            const existingLine = canvasContainer.querySelector('.selection-blue-line');
+                            if (existingLine) {
+                                existingLine.remove();
+                            }
+
+                            // 创建新的蓝线
+                            const blueLine = document.createElement('div');
+                            blueLine.className = 'selection-blue-line active';
+
+                            // 计算蓝线的Y位置
+                            const lineY = 60 + (this.selectedPosition.timeMinute * this.v3ZoomLevel); // 60px header offset
+                            blueLine.style.top = lineY + 'px';
+
+                            canvasContainer.appendChild(blueLine);
+                            console.log('🎯 Blue line created at Y:', lineY);
+                        }
+
+                        // 显示列选中状态
+                        const dayColumns = document.querySelectorAll('.day-column-v3');
+                        if (dayColumns[this.selectedPosition.column]) {
+                            dayColumns[this.selectedPosition.column].classList.add('selected');
+                            console.log('🎯 Column selected:', this.selectedPosition.column);
+                        }
+                    });
+                },
+
+                // 清除选择指示器
+                clearSelectionIndicators() {
+                    // 移除蓝线
+                    const existingLine = document.querySelector('.selection-blue-line');
+                    if (existingLine) {
+                        existingLine.remove();
+                    }
+
+                    // 移除列选中状态
+                    document.querySelectorAll('.day-column-v3.selected').forEach(col => {
+                        col.classList.remove('selected');
+                    });
+
+                    // 重置选择状态
+                    this.selectedPosition.isSelected = false;
+                    console.log('🎯 Selection indicators cleared');
+                },
+
+                // V3网格双击处理 - 创建新卡片
+                handleV3GridDoubleClick(event, day) {
+                    console.log('🎯 V3 Grid double clicked:', day, event);
+
+                    // 确保不是卡片双击事件
+                    if (event.target.closest('.task-card-v3')) {
+                        console.log('🚫 Double clicked on task card, ignoring grid double click');
+                        return;
+                    }
+
+                    // 计算点击位置对应的时间
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
+                    const canvasContainer = document.querySelector('.canvas-grid-container');
+
+                    // 🔧 修复：加入滚动偏移量
+                    const scrollTop = canvasContainer ? canvasContainer.scrollTop : 0;
+                    const relativeY = event.clientY - canvasRect.top - 60 + scrollTop; // 减去header高度，加上滚动偏移
+
+                    // 计算对应的时间（吸附到10分钟网格）
+                    const minutesFromStart = Math.max(0, Math.round(relativeY / (10 * this.v3ZoomLevel)) * 10);
+
+                    // 🔧 临时修复：添加10分钟偏差矫正（仅在标准状态下）
+                    const correctedMinutes = this.v3ZoomLevel === 1.0 ? minutesFromStart + 10 : minutesFromStart;
+                    const clickHour = this.v3TimeStart + Math.floor(correctedMinutes / 60);
+                    const clickMinute = correctedMinutes % 60;
+
+                    // 计算起始时间
                     const startTimeStr = clickHour + ':' + clickMinute.toString().padStart(2, '0');
 
+                    console.log('🎯 Double click calculated time:', startTimeStr);
                     console.log('🎯 Selected node for V3 creation:', this.selectedNode);
 
-                    // 根据是否有选中节点决定创建方式（采用V2的逻辑）
+                    // 根据是否有选中节点决定创建方式
                     if (this.selectedNode.id) {
                         // 有选中节点 - 自动填入信息
                         this.newEvent = {
@@ -5337,6 +4889,8 @@
                         console.log('📄 Created V3 event from blank');
                     }
 
+                    // 清除选择状态并显示创建模态框
+                    this.clearSelectionIndicators();
                     this.showNewEventModal = true;
                 },
 
@@ -5515,9 +5069,9 @@
 
                     console.log('🎨 V3 canvas re-rendered with zoom:', this.v3ZoomLevel);
 
-                    // 重新初始化拖拽功能（缩放后卡片需要重新绑定事件）
+                    // 拖拽功能已移除，改为点击选择模式
                     this.$nextTick(() => {
-                        this.initV3DragAndDrop();
+                        console.log('V3缩放后点击选择模式已就绪');
                     });
                 },
                 
