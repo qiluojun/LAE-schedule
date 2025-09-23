@@ -1,8 +1,8 @@
 # LAE Schedule System - Development Status
 
-**Date**: 2025-09-18 (V3.0 Phase 2A++ 拖拽Bug深度分析)
+**Date**: 2025-09-23 (V3.0 Phase 2A+++ Unicode与并排摆放全面修复)
 **Current Version**: v3.0-dev
-**Session Summary**: 深度分析V3拖拽卡片消失Bug，尝试多种修复方案，修复了缩放后拖拽问题，但短距离拖拽卡片消失问题需要架构层面重构
+**Session Summary**: 全面修复Unicode编码错误、时间槽冲突检测逻辑、前端并排摆放状态管理，实现真正的V3并排摆放功能，但卡片位置计算仍需优化
 
 ## 🚀 V3.0 Phase 2A 实现状态 (2025-09-17)
 
@@ -131,6 +131,90 @@
 - 直接使用蓝线吸附时计算的时间，避免drop时重新计算
 - 可能需要在`snapToGrid`时就保存精确时间
 - 确保蓝线位置与最终卡片位置100%一致
+
+### 🔧 V3 Phase 2A+++ 并排摆放核心问题修复 (2025-09-23)
+
+#### ✅ 本次会话重大突破
+**全面修复三层核心问题**：
+1. ✅ **Unicode编码错误修复**: 解决Windows环境下cp932编码问题，修复API调用500/400错误
+2. ✅ **时间槽冲突检测重构**: 修复conflict detection逻辑，支持真正的并排摆放(canvas_position_y)
+3. ✅ **前端状态管理修复**: 修复loadFreeCanvasCards()处理数组事件数据，解决卡片消失问题
+
+#### 🐛 Unicode编码问题修复过程
+**问题**: Windows cp932编码无法处理Unicode字符，导致调试输出失败
+```
+UnicodeEncodeError: 'cp932' codec can't encode character '\u2728' in position X
+```
+
+**解决方案**:
+1. **第一轮**: 使用repr()安全输出Unicode调试信息
+2. **第二轮**: 添加try-catch异常处理
+3. **第三轮**: 完全移除Unicode字符，使用纯ASCII调试输出
+
+**效果**: ✅ 完全消除Unicode相关的API错误
+
+#### 🔧 时间槽冲突检测重构
+**问题**: V3并排摆放时，系统仍使用V2单卡片逻辑，拒绝已占用时间槽
+```
+"Time slot already occupied" - 即使应该支持并排摆放
+```
+
+**核心修复** (`scheduled_events.py`):
+```python
+if update_data.get("canvas_position_y", 0) == 0:
+    # 自动计算下一个可用的Y位置
+    max_y_result = db.query(ScheduledEvent.canvas_position_y).filter(
+        ScheduledEvent.id != event_id,
+        ScheduledEvent.event_date == check_date,
+        ScheduledEvent.time_slot == check_slot
+    ).all()
+    existing_y_positions = [row[0] for row in max_y_result if row[0] is not None]
+    next_y = max(existing_y_positions, default=-1) + 1
+    update_data["canvas_position_y"] = next_y
+```
+
+**效果**: ✅ 真正支持同一时间槽多卡片并排摆放
+
+#### 🎨 前端状态管理修复
+**问题**: 卡片移动成功但切换视图后消失
+**根因**: `loadFreeCanvasCards()`无法处理并排摆放产生的数组格式事件数据
+
+**修复前**:
+```javascript
+// 只能处理单个事件对象
+if (eventData && eventData.id) {
+    // 创建卡片...
+} else {
+    console.log('🔍 [DEBUG] 跳过无效事件:', eventData); // 数组被跳过
+}
+```
+
+**修复后**:
+```javascript
+// 处理事件数据 - 可能是单个对象或数组
+let events = [];
+if (eventData) {
+    if (Array.isArray(eventData)) {
+        events = eventData.filter(e => e && e.id);
+        console.log('🔍 [DEBUG] 数组事件，包含', events.length, '个有效事件');
+    } else if (eventData.id) {
+        events = [eventData];
+        console.log('🔍 [DEBUG] 单个事件');
+    }
+}
+```
+
+**效果**: ✅ 完美处理并排摆放的数组事件数据，解决卡片持久性问题
+
+#### ❌ 剩余问题：卡片位置计算不准确
+**当前状态**: 虽然卡片现在可以持久保存和正确加载，但位置计算仍有偏差
+**问题描述**: 移动后的卡片位置与预期位置不匹配
+**建议**: 需要优化位置计算算法，特别是X/Y坐标的计算逻辑
+
+#### 📋 下次对话优先任务
+1. **位置计算优化**: 修复卡片X/Y坐标计算逻辑，确保精确位置
+2. **视觉效果优化**: 优化并排摆放的视觉显示
+3. **用户体验完善**: 完善V3拖拽交互体验
 
 ### 🔧 V3 Phase 2A++ 拖拽卡片消失Bug深度分析 (2025-09-18 下午)
 

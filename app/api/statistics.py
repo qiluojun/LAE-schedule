@@ -7,6 +7,7 @@ from collections import defaultdict
 from app.database import get_db
 from app.models.activity import Activity as ActivityModel
 from app.models.scheduled_event import ScheduledEvent as ScheduledEventModel
+from app.models.models import Domain, ActivityType, Schedule
 
 router = APIRouter()
 
@@ -157,3 +158,88 @@ def get_activity_tree_statistics(db: Session = Depends(get_db)):
         return result
     
     return build_tree_with_stats()
+
+
+@router.get("/domains/statistics")
+def get_domain_statistics(db: Session = Depends(get_db)):
+    """获取所有Domain的统计信息，包括日程数量和卡片数量"""
+    domains = db.query(Domain).all()
+    result = {}
+
+    for domain in domains:
+        # 统计该domain的所有scheduled_events（包括子domain）
+        child_domains = get_domain_descendants(db, domain.id)
+        all_domain_ids = {domain.id}.union(child_domains)
+
+        # 统计日程数量（V2架构）
+        schedule_count = db.query(Schedule).filter(
+            Schedule.domain_id.in_(all_domain_ids)
+        ).count()
+
+        # 统计卡片数量（V3架构）- 基于scheduled_events表中的domain_id
+        card_count = db.query(ScheduledEventModel).filter(
+            ScheduledEventModel.domain_id.in_(all_domain_ids)
+        ).count()
+
+        result[domain.id] = {
+            "domain_id": domain.id,
+            "domain_name": domain.name,
+            "schedule_count": schedule_count,
+            "card_count": card_count,
+            "total_items": schedule_count + card_count
+        }
+
+    return result
+
+
+@router.get("/activity-types/statistics")
+def get_activity_type_statistics(db: Session = Depends(get_db)):
+    """获取所有ActivityType的统计信息，包括卡片数量"""
+    activity_types = db.query(ActivityType).all()
+    result = {}
+
+    for activity_type in activity_types:
+        # 统计该activity_type的所有scheduled_events（包括子type）
+        child_types = get_activity_type_descendants(db, activity_type.id)
+        all_type_ids = {activity_type.id}.union(child_types)
+
+        # 统计卡片数量（V3架构）- 基于scheduled_events表中的activity_type_id
+        card_count = db.query(ScheduledEventModel).filter(
+            ScheduledEventModel.activity_type_id.in_(all_type_ids)
+        ).count()
+
+        result[activity_type.id] = {
+            "activity_type_id": activity_type.id,
+            "activity_type_name": activity_type.name,
+            "card_count": card_count
+        }
+
+    return result
+
+
+def get_domain_descendants(db: Session, domain_id: int):
+    """递归获取domain的所有子domain ID"""
+    descendants = set()
+
+    def collect_children(parent_id):
+        children = db.query(Domain).filter(Domain.parent_id == parent_id).all()
+        for child in children:
+            descendants.add(child.id)
+            collect_children(child.id)
+
+    collect_children(domain_id)
+    return descendants
+
+
+def get_activity_type_descendants(db: Session, activity_type_id: int):
+    """递归获取activity_type的所有子type ID"""
+    descendants = set()
+
+    def collect_children(parent_id):
+        children = db.query(ActivityType).filter(ActivityType.parent_id == parent_id).all()
+        for child in children:
+            descendants.add(child.id)
+            collect_children(child.id)
+
+    collect_children(activity_type_id)
+    return descendants

@@ -326,9 +326,9 @@
             border: 2px solid #495057;
         }
 
-        /* ========== V3.0 动态画布UI系统 ========== */
+        /* ========== V3.0 自由画布系统 ========== */
 
-        /* V3 微网格容器 */
+        /* V3 自由画布容器 */
         .week-canvas-v3 {
             position: relative;
             background-color: #fafafa;
@@ -338,6 +338,24 @@
             overflow: auto;
             min-height: 400px;
             max-height: 70vh;
+        }
+
+        /* 自由卡片工作区 - 覆盖在网格系统之上 */
+        .canvas-workspace {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none; /* 让双击穿透到下层 */
+            /* 继承父容器的缩放变换 */
+            transform-origin: top left;
+        }
+
+        /* 自由卡片启用指针事件 */
+        .canvas-workspace .task-card-v3 {
+            pointer-events: auto;
         }
 
         /* 画布网格容器 */
@@ -472,11 +490,11 @@
             border-right: none;
         }
 
-        /* V3 动态卡片样式 */
+        /* V3 自由卡片样式 - 统一尺寸 */
         .task-card-v3 {
             position: absolute;
-            left: 4px;
-            right: 4px;
+            width: 120px;  /* 固定宽度 */
+            height: 60px;  /* 固定高度 */
             background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
             border: 1px solid #ffc107;
             border-radius: 6px;
@@ -487,7 +505,11 @@
             font-size: 0.75rem;
             z-index: 5;
             overflow: hidden;
-            min-height: 20px; /* 最小2个网格单位 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.2;
         }
 
         .task-card-v3:hover {
@@ -497,7 +519,32 @@
         }
 
         .task-card-v3:active {
-            cursor: grabbing;
+            cursor: pointer;
+        }
+
+        /* 选中状态的卡片样式 */
+        .task-card-v3.selected {
+            border: 2px solid #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            z-index: 15;
+        }
+
+        .task-card-v3.selected::after {
+            content: "✓";
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
 
         /* 精确任务特殊样式 */
@@ -938,10 +985,7 @@
                                             ← 返回V2
                                         </button>
                                         <div class="d-flex align-items-center">
-                                            <label class="form-label me-2 mb-0">缩放:</label>
-                                            <button class="btn btn-sm btn-outline-primary me-1" @click="adjustZoom(-0.25)" :disabled="v3ZoomLevel <= 0.5">-</button>
-                                            <span class="mx-2" x-text="Math.round(v3ZoomLevel * 100) + '%'"></span>
-                                            <button class="btn btn-sm btn-outline-primary" @click="adjustZoom(0.25)" :disabled="v3ZoomLevel >= 2.0">+</button>
+                                            <span class="text-muted">🎨 自由画布模式</span>
                                         </div>
                                     </div>
 
@@ -952,9 +996,8 @@
                                         </div>
                                     </div>
 
-                                    <!-- V3微网格画布 -->
-                                    <div class="week-canvas-v3" id="week-canvas-v3"
-                                         :style="`height: ${getCanvasHeight()}px;`">
+                                    <!-- V3自由画布 -->
+                                    <div class="week-canvas-v3" id="week-canvas-v3">
 
                                         <!-- 网格容器 -->
                                         <div class="canvas-grid-container">
@@ -973,9 +1016,12 @@
                                             <!-- 7天列容器 -->
                                             <div class="days-container">
                                                 <template x-for="(day, index) in weekDates" :key="day">
-                                                    <div class="day-column-v3" @click="handleV3GridClick($event, day)" @dblclick="handleV3GridDoubleClick($event, day)">
-                                                        <!-- 当天的任务卡片 -->
-                                                        <div x-html="renderDayCardsV3(day)">
+                                                    <div class="day-column-v3"
+                                                         @click="handleCanvasClick($event)"
+                                                         @dblclick="handleCanvasDoubleClick($event)"
+                                                         @contextmenu="handleCanvasRightClick($event)">
+                                                        <!-- 当天的任务卡片容器 -->
+                                                        <div class="day-cards-container" data-day="${day}">
                                                         </div>
                                                     </div>
                                                 </template>
@@ -985,14 +1031,10 @@
                                             <div class="grid-lines-layer" x-html="renderGridLines()">
                                             </div>
 
-                                            <!-- 吸附指示器 -->
-                                            <div class="snap-indicator" id="snap-indicator" :style="`top: ${snapIndicatorY}px`">
-                                            </div>
-
-                                            <!-- V3专用吸附指示器 -->
-                                            <div class="v3-snap-line" id="v3-snap-line" x-show="v3SnapIndicator.visible"
-                                                 :style="`top: ${v3SnapIndicator.y}px`">
-                                                <div class="v3-snap-tooltip" x-text="v3SnapIndicator.tooltip"></div>
+                                            <!-- 画布工作区 - 自由卡片层 -->
+                                            <div class="canvas-workspace" id="canvas-workspace">
+                                                <!-- 自由卡片将在这里动态渲染 -->
+                                                <div x-html="renderCanvasCards()"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -1255,41 +1297,26 @@
                                        placeholder="描述你要做的具体事情" required>
                             </div>
 
-                            <!-- V3.0 时长和精确时间设置 (编辑模式) -->
-                            <div x-show="isV3Mode" class="card mb-3" style="border-left: 4px solid #28a745;">
+                            <!-- 时间信息显示 (只读) -->
+                            <div class="card mb-3" style="border-left: 4px solid #6c757d;">
                                 <div class="card-body py-2">
-                                    <h6 class="card-title mb-2">🔧 V3 动态画布设置</h6>
-
-                                    <div class="row mb-2">
-                                        <div class="col-4">
-                                            <label class="form-label">🕐 起始时间</label>
-                                            <input type="time" class="form-control" x-model="editingEvent.start_time"
-                                                   @input="updateEditingTimeSlot()">
-                                        </div>
-                                        <div class="col-4">
-                                            <label class="form-label">⏱️ 预计时长 (分钟)</label>
-                                            <input type="number" class="form-control" x-model="editingEvent.duration"
-                                                   min="10" max="480" step="10">
-                                        </div>
-                                        <div class="col-4">
-                                            <div class="form-check mt-4">
-                                                <input class="form-check-input" type="checkbox"
-                                                       x-model="editingEvent.is_precise" id="editPreciseTimeCheck">
-                                                <label class="form-check-label" for="editPreciseTimeCheck">
-                                                    🎯 精确时间
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- 结束时间显示 -->
+                                    <h6 class="card-title mb-2">⏰ 时间信息 (自动计算)</h6>
                                     <div class="row">
-                                        <div class="col-12">
-                                            <label class="form-label">🏁 结束时间 (计算得出)</label>
+                                        <div class="col-6">
+                                            <label class="form-label">🕐 起始时间</label>
                                             <input type="text" class="form-control"
-                                                   x-bind:value="calculateEndTime(editingEvent.start_time, editingEvent.duration)"
+                                                   x-bind:value="editingEvent.start_time || '未设置'"
                                                    readonly style="background-color: #f8f9fa;">
                                         </div>
+                                        <div class="col-6">
+                                            <label class="form-label">⏱️ 预计时长</label>
+                                            <input type="text" class="form-control"
+                                                   x-bind:value="(editingEvent.duration || 60) + ' 分钟'"
+                                                   readonly style="background-color: #f8f9fa;">
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">💡 要修改时间和位置，请使用：单击选中卡片 → 单击目标位置</small>
                                     </div>
                                 </div>
                             </div>
@@ -1698,12 +1725,14 @@
                     y: 0,
                     tooltip: ''
                 },
+                // V3 时间和缩放设置
+                v3ZoomLevel: 1.0, // V3缩放级别
+                v3TimeStart: 7, // 开始时间(7:00)
+                v3TimeEnd: 23, // 结束时间(23:00)
 
-                // V3 状态
-                lastSnapTime: null, // 保存最后吸附的时间
-                v3TimeStart: 7, // V3开始时间(小时) - 7:00
-                v3TimeEnd: 23, // V3结束时间(小时) - 23:00
-                v3ZoomLevel: 1.0, // V3缩放级别 (0.5 - 2.0)
+                // V3 自由画布状态
+                freeCanvasCards: [], // 自由画布上的卡片数组
+                selectedCardId: null, // 当前选中的卡片ID
 
                 // 新的点击选择状态
                 selectedPosition: {
@@ -1751,6 +1780,10 @@
                 flatActivityTypes: [],
                 domainScheduleCounts: {},  // 存储每个Domain的Schedule数量
                 weeklySchedules: [],  // 当前周的Schedule数据
+
+                // v3.0 统计数据
+                domainStatistics: {},  // 存储每个Domain的统计信息（日程+卡片）
+                activityTypeStatistics: {},  // 存储每个ActivityType的统计信息
 
                 // v2.1 侧边栏状态
                 sidebarMode: 'domain', // 'domain' or 'type'
@@ -2163,7 +2196,10 @@
                             duration: this.newEvent.duration ? parseInt(this.newEvent.duration) : 60,
                             start_time: this.newEvent.start_time ? this.formatTimeForAPI(this.newEvent.start_time) : null,
                             is_precise: !!this.newEvent.is_precise,
-                            canvas_position_y: this.newEvent.canvas_position_y || 0
+                            canvas_position_y: this.newEvent.canvas_position_y || 0,
+                            // V3.0 自由画布位置字段 - 确保为整数
+                            x: this.newEvent.x ? Math.round(this.newEvent.x) : null,
+                            y: this.newEvent.y ? Math.round(this.newEvent.y) : null
                         };
 
                         console.log('🎯 Creating new event with data:', eventData);
@@ -2198,6 +2234,8 @@
 
                         const createdEvent = await response.json();
                         console.log('✅ Event created successfully:', createdEvent);
+                        console.log('🔍 [DEBUG] API返回的x值:', createdEvent.x, typeof createdEvent.x);
+                        console.log('🔍 [DEBUG] API返回的y值:', createdEvent.y, typeof createdEvent.y);
 
                         // 关闭模态框并重置表单
                         this.showNewEventModal = false;
@@ -2216,8 +2254,43 @@
                             canvas_position_y: 0
                         };
 
-                        // 重新加载周数据
-                        await this.loadWeekSchedule();
+                        // V3模式：直接添加到本地数组，避免重新加载导致卡片丢失
+                        if (this.isV3Mode) {
+                            const newCanvasCard = {
+                                id: createdEvent.id,
+                                name: createdEvent.name,
+                                event_date: createdEvent.event_date,
+                                time_slot: createdEvent.time_slot,
+                                domain_id: createdEvent.domain_id,
+                                activity_type_id: createdEvent.activity_type_id,
+                                schedule_id: createdEvent.schedule_id,
+                                notes: createdEvent.notes || '',
+                                status: createdEvent.status,
+                                goal: createdEvent.goal || '',
+                                duration: createdEvent.duration || 60,
+                                start_time: createdEvent.start_time,
+                                is_precise: createdEvent.is_precise || false,
+                                canvas_position_y: createdEvent.canvas_position_y || 0,
+                                x: createdEvent.x || 0,
+                                y: createdEvent.y || 0
+                            };
+
+                            // 添加到本地卡片数组
+                            this.freeCanvasCards.push(newCanvasCard);
+
+                            // 强制重新渲染画布
+                            this.$nextTick(() => {
+                                const canvasWorkspace = document.querySelector('#canvas-workspace > div');
+                                if (canvasWorkspace) {
+                                    canvasWorkspace.innerHTML = this.renderCanvasCards();
+                                }
+                            });
+
+                            console.log('✅ V3卡片已添加到画布，保留选中状态批量创建');
+                        } else {
+                            // V2模式：重新加载周数据
+                            await this.loadWeekSchedule();
+                        }
 
                         // v2.1 改进：保留选中状态以便快速批量创建
                         console.log('✅ Event created, keeping selected node for batch creation');
@@ -2635,6 +2708,69 @@
                     }
                 },
 
+                // v3.0 加载统计数据
+                async loadDomainStatistics() {
+                    try {
+                        console.log('🔍 Loading domain statistics...');
+                        const response = await fetch('/api/statistics/domains/statistics');
+                        console.log('🔍 Domain statistics response status:', response.status);
+
+                        if (response.ok) {
+                            this.domainStatistics = await response.json();
+                            console.log('✅ Domain statistics loaded:', this.domainStatistics);
+                            console.log('✅ Domain statistics keys:', Object.keys(this.domainStatistics));
+
+                            // Debug: Show sample data
+                            const sampleKey = Object.keys(this.domainStatistics)[0];
+                            if (sampleKey) {
+                                console.log('✅ Sample domain stats:', sampleKey, this.domainStatistics[sampleKey]);
+                            }
+                        } else {
+                            const errorText = await response.text();
+                            console.error('⚠️ Failed to load domain statistics:', response.status, errorText);
+                            this.domainStatistics = {};
+                        }
+                    } catch (error) {
+                        console.error('❌ Error loading domain statistics:', error);
+                        this.domainStatistics = {};
+                    }
+                },
+
+                async loadActivityTypeStatistics() {
+                    try {
+                        console.log('🔍 Loading activity type statistics...');
+                        const response = await fetch('/api/statistics/activity-types/statistics');
+                        console.log('🔍 ActivityType statistics response status:', response.status);
+
+                        if (response.ok) {
+                            this.activityTypeStatistics = await response.json();
+                            console.log('✅ ActivityType statistics loaded:', this.activityTypeStatistics);
+                            console.log('✅ ActivityType statistics keys:', Object.keys(this.activityTypeStatistics));
+
+                            // Debug: Show sample data
+                            const sampleKey = Object.keys(this.activityTypeStatistics)[0];
+                            if (sampleKey) {
+                                console.log('✅ Sample activity type stats:', sampleKey, this.activityTypeStatistics[sampleKey]);
+                            }
+                        } else {
+                            const errorText = await response.text();
+                            console.error('⚠️ Failed to load activity type statistics:', response.status, errorText);
+                            this.activityTypeStatistics = {};
+                        }
+                    } catch (error) {
+                        console.error('❌ Error loading activity type statistics:', error);
+                        this.activityTypeStatistics = {};
+                    }
+                },
+
+                // 加载所有V3统计数据
+                async loadV3Statistics() {
+                    await Promise.all([
+                        this.loadDomainStatistics(),
+                        this.loadActivityTypeStatistics()
+                    ]);
+                },
+
                 // 编辑活动 (v1.0保留)
                 editActivity(activityId) {
                     const activity = this.flatActivities.find(a => a.id === activityId);
@@ -2752,8 +2888,16 @@
                         // 同时加载当前周的Schedule时间条数据
                         await this.loadWeeklySchedules();
 
-                        // V3模式拖拽功能已移除，改为点击选择模式
+                        // V3模式：加载自由画布卡片
                         if (this.isV3Mode) {
+                            this.loadFreeCanvasCards();
+                            // 强制重新渲染画布
+                            this.$nextTick(() => {
+                                const canvasWorkspace = document.querySelector('#canvas-workspace > div');
+                                if (canvasWorkspace) {
+                                    canvasWorkspace.innerHTML = this.renderCanvasCards();
+                                }
+                            });
                             console.log('V3点击选择模式已就绪');
                         }
                     } catch (error) {
@@ -2978,7 +3122,10 @@
                             duration: this.editingEvent.duration ? parseInt(this.editingEvent.duration) : 60,
                             start_time: this.editingEvent.start_time ? this.formatTimeForAPI(this.editingEvent.start_time) : null,
                             is_precise: !!this.editingEvent.is_precise,
-                            canvas_position_y: this.editingEvent.canvas_position_y || 0
+                            canvas_position_y: this.editingEvent.canvas_position_y || 0,
+                            // V3.0 自由画布位置字段 - 确保为整数
+                            x: this.editingEvent.x ? Math.round(this.editingEvent.x) : null,
+                            y: this.editingEvent.y ? Math.round(this.editingEvent.y) : null
                         };
 
                         console.log('📝 Updating event with data:', eventData);
@@ -2993,20 +3140,112 @@
 
                         if (!response.ok) {
                             const errorData = await response.json();
-                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || 'Unknown error'}`);
+                            console.error('🚨 API错误详细信息:', {
+                                status: response.status,
+                                statusText: response.statusText,
+                                errorData: errorData,
+                                发送的数据: eventData
+                            });
+
+                            // 处理422验证错误的详细信息
+                            if (response.status === 422 && errorData.detail) {
+                                let errorMsg = '验证错误:\n';
+                                if (Array.isArray(errorData.detail)) {
+                                    errorData.detail.forEach(err => {
+                                        errorMsg += `- ${err.loc?.join('.') || 'unknown'}: ${err.msg}\n`;
+                                    });
+                                } else {
+                                    errorMsg += JSON.stringify(errorData.detail, null, 2);
+                                }
+                                throw new Error(errorMsg);
+                            }
+
+                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || JSON.stringify(errorData)}`);
                         }
 
                         console.log('✅ Event updated successfully');
 
-                        // 关闭模态框并重新加载数据
-                        this.forceCloseModal();
-                        await this.loadWeekSchedule();
+                        // V3模式：直接更新本地数组中的卡片，避免重新加载导致卡片丢失
+                        if (this.isV3Mode) {
+                            // 保存ID，因为forceCloseModal会重置editingEvent
+                            const cardId = this.editingEvent.id;
 
-                        // 重新渲染网格
-                        const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                        if (gridContainer) {
-                            gridContainer.innerHTML = this.renderFullWeekGrid();
-                            // 拖拽功能已移除
+                            const cardIndex = this.freeCanvasCards.findIndex(c => c.id === cardId);
+                            console.log('🔍 本地数组更新 - 查找卡片:', {
+                                查找ID: cardId,
+                                找到的索引: cardIndex,
+                                数组长度: this.freeCanvasCards.length
+                            });
+
+                            if (cardIndex !== -1) {
+                                console.log('🔍 更新前的卡片数据:', {
+                                    name: this.freeCanvasCards[cardIndex].name,
+                                    notes: this.freeCanvasCards[cardIndex].notes,
+                                    status: this.freeCanvasCards[cardIndex].status
+                                });
+
+                                console.log('🔍 准备更新的数据:', {
+                                    name: eventData.name,
+                                    notes: eventData.notes,
+                                    status: eventData.status,
+                                    完整数据: eventData
+                                });
+
+                                // 更新本地卡片数据 - 确保同步所有字段
+                                Object.assign(this.freeCanvasCards[cardIndex], {
+                                    name: eventData.name,
+                                    event_date: eventData.event_date,
+                                    time_slot: eventData.time_slot,
+                                    notes: eventData.notes,
+                                    status: eventData.status,
+                                    domain_id: eventData.domain_id,
+                                    activity_type_id: eventData.activity_type_id,
+                                    schedule_id: eventData.schedule_id,
+                                    goal: eventData.goal,
+                                    duration: eventData.duration,
+                                    start_time: eventData.start_time,
+                                    is_precise: eventData.is_precise,
+                                    canvas_position_y: eventData.canvas_position_y,
+                                    // 确保更新位置字段
+                                    x: eventData.x,
+                                    y: eventData.y
+                                });
+
+                                console.log('✅ V3卡片本地数据已完整更新:', {
+                                    name: this.freeCanvasCards[cardIndex].name,
+                                    notes: this.freeCanvasCards[cardIndex].notes,
+                                    status: this.freeCanvasCards[cardIndex].status,
+                                    完整数据: this.freeCanvasCards[cardIndex]
+                                });
+                            } else {
+                                console.error('❌ 未找到要更新的卡片索引');
+                            }
+
+                            // 强制重新渲染画布
+                            this.$nextTick(() => {
+                                const canvasWorkspace = document.querySelector('#canvas-workspace > div');
+                                if (canvasWorkspace) {
+                                    canvasWorkspace.innerHTML = this.renderCanvasCards();
+                                }
+                            });
+
+                            console.log('✅ V3卡片已更新，无需重新加载');
+
+                            // 关闭模态框
+                            this.forceCloseModal();
+                        } else {
+                            // V2模式：重新加载数据
+                            await this.loadWeekSchedule();
+
+                            // 重新渲染网格
+                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                            if (gridContainer) {
+                                gridContainer.innerHTML = this.renderFullWeekGrid();
+                                // 拖拽功能已移除
+                            }
+
+                            // 关闭模态框
+                            this.forceCloseModal();
                         }
 
                     } catch (error) {
@@ -3018,6 +3257,11 @@
                 // v2.1 删除编辑的事件
                 async deleteEditedEvent() {
                     if (!this.editingEvent.id) return;
+
+                    console.log('🔍 [DEBUG] deleteEditedEvent 开始执行');
+                    console.log('🔍 [DEBUG] 要删除的事件ID:', this.editingEvent.id);
+                    console.log('🔍 [DEBUG] 删除前 freeCanvasCards 数组长度:', this.freeCanvasCards.length);
+                    console.log('🔍 [DEBUG] 删除前所有卡片ID:', this.freeCanvasCards.map(c => c.id));
 
                     if (confirm('确定要删除这个事件吗？')) {
                         try {
@@ -3032,20 +3276,52 @@
                             }
 
                             console.log('✅ Event deleted successfully');
+                            console.log('🔍 [DEBUG] API删除成功，开始更新本地数据');
+
+                            // 从 freeCanvasCards 数组中移除被删除的卡片
+                            const deletedEventId = this.editingEvent.id;
+                            const beforeDelete = this.freeCanvasCards.length;
+
+                            this.freeCanvasCards = this.freeCanvasCards.filter(card => {
+                                const shouldKeep = card.id != deletedEventId;
+                                if (!shouldKeep) {
+                                    console.log('🔍 [DEBUG] 从本地数组移除卡片:', card);
+                                }
+                                return shouldKeep;
+                            });
+
+                            console.log('🔍 [DEBUG] 删除后 freeCanvasCards 数组长度变化:', {
+                                删除前: beforeDelete,
+                                删除后: this.freeCanvasCards.length,
+                                变化: beforeDelete - this.freeCanvasCards.length
+                            });
+                            console.log('🔍 [DEBUG] 删除后剩余卡片ID:', this.freeCanvasCards.map(c => c.id));
 
                             // 关闭模态框并重新加载数据
                             this.forceCloseModal();
-                            await this.loadWeekSchedule();
 
-                            // 重新渲染网格
-                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                            if (gridContainer) {
-                                gridContainer.innerHTML = this.renderFullWeekGrid();
-                                // 拖拽功能已移除
+                            // 检查当前视图模式
+                            if (this.currentView === 'week' && this.viewMode === 'v3') {
+                                console.log('🔍 [DEBUG] V3模式，触发画布重新渲染');
+                                // V3模式：直接重新渲染画布
+                                this.$nextTick(() => {
+                                    this.renderCanvasCards();
+                                });
+                            } else {
+                                console.log('🔍 [DEBUG] 非V3模式，重新加载周视图');
+                                await this.loadWeekSchedule();
+
+                                // 重新渲染网格
+                                const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
+                                if (gridContainer) {
+                                    gridContainer.innerHTML = this.renderFullWeekGrid();
+                                    // 拖拽功能已移除
+                                }
                             }
 
                         } catch (error) {
                             console.error('❌ 删除事件失败:', error);
+                            console.error('🔍 [DEBUG] 删除错误详细信息:', error.stack);
                             alert('删除事件失败: ' + error.message);
                         }
                     }
@@ -3463,13 +3739,25 @@
                     const renderNode = (domain, level = 0) => {
                         const children = this.domains.filter(d => d.parent_id === domain.id);
                         const scheduleCount = this.getDomainScheduleCount(domain.id);
+                        const stats = this.domainStatistics[domain.id] || {};
+                        const cardCount = stats.card_count || 0;
+
+                        // Debug logging
+                        if (domain.id <= 3) {  // Only log first 3 for brevity
+                            console.log('📊 Domain', domain.id, domain.name, '- Stats:', stats, '- Card count:', cardCount);
+                        }
+
                         let html = `
                             <div class="mb-2" style="margin-left: ${level * 20}px;">
                                 <div class="d-flex justify-content-between align-items-center border-start border-primary border-3 ps-2 py-1">
                                     <div>
                                         <strong>${domain.name}</strong>
-                                        ${scheduleCount > 0 ? `<span class="badge bg-info ms-2">${scheduleCount} 日程</span>` : ''}
-                                        ${domain.description ? `<br><small class="text-muted">${domain.description}</small>` : ''}
+                                        <div class="mt-1">
+                                            ${scheduleCount > 0 ? `<span class="badge bg-info me-1">${scheduleCount} 日程</span>` : ''}
+                                            ${cardCount > 0 ? `<span class="badge bg-success me-1">${cardCount} 卡片</span>` : ''}
+                                            ${(scheduleCount + cardCount) === 0 ? '<span class="badge bg-secondary">无内容</span>' : ''}
+                                        </div>
+                                        ${domain.description ? `<small class="text-muted d-block mt-1">${domain.description}</small>` : ''}
                                     </div>
                                     <div>
                                         <button class="btn btn-sm btn-outline-info me-1" @click="manageSchedules(${domain.id})" title="管理日程">📅</button>
@@ -3495,12 +3783,23 @@
 
                     const renderNode = (type, level = 0) => {
                         const children = this.activityTypes.filter(t => t.parent_id === type.id);
+                        const stats = this.activityTypeStatistics[type.id] || {};
+                        const cardCount = stats.card_count || 0;
+
+                        // Debug logging
+                        if (type.id <= 3) {  // Only log first 3 for brevity
+                            console.log('📊 ActivityType', type.id, type.name, '- Stats:', stats, '- Card count:', cardCount);
+                        }
+
                         let html = `
                             <div class="mb-2" style="margin-left: ${level * 20}px;">
                                 <div class="d-flex justify-content-between align-items-center border-start border-success border-3 ps-2 py-1">
                                     <div>
                                         <strong>${type.name}</strong>
-                                        ${type.description ? `<br><small class="text-muted">${type.description}</small>` : ''}
+                                        <div class="mt-1">
+                                            ${cardCount > 0 ? `<span class="badge bg-success">${cardCount} 卡片</span>` : '<span class="badge bg-secondary">无卡片</span>'}
+                                        </div>
+                                        ${type.description ? `<small class="text-muted d-block mt-1">${type.description}</small>` : ''}
                                     </div>
                                     <div>
                                         <button class="btn btn-sm btn-outline-success me-1" @click="editActivityType(${type.id})">编辑</button>
@@ -3982,29 +4281,726 @@
                     return this.renderFullWeekGrid();
                 },
 
-                // ========== V3.0 动态画布方法 ==========
+                // ========== V3.0 自由画布方法 ==========
 
                 // 切换网格模式
                 switchGridMode() {
-                    console.log('🔄 Switching grid mode to:', this.isV3Mode ? 'V3' : 'V2');
+                    console.log('🔄 Switching grid mode to:', this.isV3Mode ? 'V3 Free Canvas' : 'V2');
 
-                    // 拖拽功能已移除，改为点击选择模式
                     this.$nextTick(() => {
                         if (this.isV3Mode) {
-                            this.scrollToCurrentTime();
-                            console.log('V3点击选择模式已就绪');
+                            console.log('✨ V3 自由画布模式已启用');
+                            this.initializeFreeCanvas();
                         } else {
-                            console.log('V2点击选择模式已就绪');
+                            console.log('📋 V2 网格模式已启用');
                         }
                     });
+                },
+
+                // 初始化自由画布
+                initializeFreeCanvas() {
+                    console.log('🎨 初始化自由画布...');
+                    // 清空卡片数组并重新加载
+                    this.freeCanvasCards = [];
+                    // 从当前周数据重新加载自由画布卡片
+                    this.loadFreeCanvasCards();
+
+                    // 强制重新渲染画布
+                    this.$nextTick(() => {
+                        const canvasWorkspace = document.querySelector('#canvas-workspace > div');
+                        if (canvasWorkspace) {
+                            canvasWorkspace.innerHTML = this.renderCanvasCards();
+                        }
+                        console.log('🎨 自由画布初始化完成，已加载', this.freeCanvasCards.length, '张卡片');
+                    });
+                },
+
+                // 渲染画布上的所有卡片
+                renderCanvasCards() {
+                    if (!this.isV3Mode) return '';
+
+                    let html = '';
+                    this.freeCanvasCards.forEach(card => {
+                        html += this.renderFreeCard(card);
+                    });
+                    return html;
+                },
+
+                // 渲染单个自由卡片
+                renderFreeCard(card) {
+                    const isSelected = this.selectedCardId === card.id;
+                    const cardClass = `task-card-v3 ${isSelected ? 'selected' : ''} ${card.is_precise ? 'precise' : ''}`;
+
+                    // 调试：检查异常坐标
+                    if (card.y > 2000) {
+                        console.log('⚠️ [DEBUG] 发现异常Y坐标的卡片:', {
+                            id: card.id,
+                            name: card.name,
+                            x: card.x,
+                            y: card.y,
+                            canvas_position_y: card.canvas_position_y
+                        });
+                    }
+
+                    return `
+                        <div class="${cardClass}"
+                             data-card-id="${card.id}"
+                             data-event-id="${card.id}"
+                             style="left: ${card.x}px; top: ${card.y}px;"
+                             onclick="window.laeAppInstance.selectCard(${card.id}); event.stopPropagation();"
+                             ondblclick="window.laeAppInstance.editCard(${card.id}); event.stopPropagation();">
+                            <div>${card.name}</div>
+                            ${card.is_precise ? '<div class="time-display">' + (card.start_time || '') + '</div>' : ''}
+                        </div>
+                    `;
+                },
+
+                // 处理画布双击事件 - 创建新卡片
+                handleCanvasDoubleClick(event) {
+                    if (!this.isV3Mode) return;
+
+                    // 确保不是卡片双击事件
+                    if (event.target.closest('.task-card-v3')) {
+                        console.log('🚫 Double clicked on task card, ignoring canvas double click');
+                        return;
+                    }
+
+                    // 获取双击位置并计算时间
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
+                    const canvasContainer = document.querySelector('.canvas-grid-container');
+
+                    // 加入滚动偏移量
+                    const scrollTop = canvasContainer ? canvasContainer.scrollTop : 0;
+                    const relativeY = event.clientY - canvasRect.top - 60 + scrollTop;
+                    const relativeX = event.clientX - canvasRect.left;
+
+                    // 计算时间（吸附到10分钟网格）
+                    const minutesFromStart = Math.max(0, Math.round(relativeY / (10 * this.v3ZoomLevel)) * 10);
+                    const correctedMinutes = this.v3ZoomLevel === 1.0 ? minutesFromStart + 10 : minutesFromStart;
+                    const clickHour = this.v3TimeStart + Math.floor(correctedMinutes / 60);
+                    const clickMinute = correctedMinutes % 60;
+                    const startTimeStr = clickHour.toString().padStart(2, '0') + ':' + clickMinute.toString().padStart(2, '0');
+
+                    // 动态计算画布尺寸
+                    const canvasElement = document.getElementById('week-canvas-v3');
+                    const canvasWidth = canvasElement ? canvasElement.offsetWidth : 1050;
+                    const timeAxisWidth = 80;
+                    const availableWidth = canvasWidth - timeAxisWidth;
+                    const columnWidth = availableWidth / 7;
+
+                    // 计算卡片位置（吸附到网格）
+                    const snapY = 60 + Math.round(relativeY / (10 * this.v3ZoomLevel)) * (10 * this.v3ZoomLevel);
+                    const snapX = timeAxisWidth + Math.round((relativeX - timeAxisWidth) / columnWidth) * columnWidth;
+
+                    // 计算日期索引
+                    const dayIndex = Math.max(0, Math.min(6, Math.floor((relativeX - timeAxisWidth) / columnWidth)));
+                    const targetDay = this.weekDates[dayIndex] || this.weekDates[0];
+
+                    console.log('🎯 Double click debug:', {
+                        relativeX,
+                        canvasWidth,
+                        timeAxisWidth,
+                        availableWidth,
+                        columnWidth,
+                        adjustedX: relativeX - timeAxisWidth,
+                        dayIndex,
+                        weekDates: this.weekDates,
+                        targetDay,
+                        v3ZoomLevel: this.v3ZoomLevel,
+                        v3TimeStart: this.v3TimeStart
+                    });
+                    console.log('🎯 Double click calculated:', { startTimeStr, snapX, snapY, targetDay });
+
+                    // 根据是否有选中节点决定创建方式
+                    if (this.selectedNode.id) {
+                        this.newEvent = {
+                            name: this.selectedNode.name,
+                            event_date: targetDay,
+                            time_slot: this.getTimeSlotFromTime(startTimeStr),
+                            domain_id: this.selectedNode.type === 'domain' ? this.selectedNode.id : '',
+                            activity_type_id: this.selectedNode.type === 'type' ? this.selectedNode.id : '',
+                            schedule_id: '',
+                            notes: '',
+                            duration: 60,
+                            start_time: startTimeStr,
+                            is_precise: false,
+                            canvas_position_y: Date.now() % 10000,  // 唯一值避免冲突
+                            x: Math.round(snapX),
+                            y: Math.round(snapY)
+                        };
+                    } else {
+                        this.newEvent = {
+                            name: '',
+                            event_date: targetDay,
+                            time_slot: this.getTimeSlotFromTime(startTimeStr),
+                            domain_id: '',
+                            activity_type_id: '',
+                            schedule_id: '',
+                            notes: '',
+                            duration: 60,
+                            start_time: startTimeStr,
+                            is_precise: false,
+                            canvas_position_y: Date.now() % 10000,  // 唯一值避免冲突
+                            x: Math.round(snapX),
+                            y: Math.round(snapY)
+                        };
+                    }
+
+                    // 显示创建模态框
+                    this.showNewEventModal = true;
+                },
+
+                // 处理画布单击事件 - 移动选中卡片
+                async handleCanvasClick(event) {
+                    if (!this.isV3Mode) return;
+
+                    // 如果有选中的卡片，移动它
+                    if (this.selectedCardId) {
+                        const position = this.getCanvasPosition(event);
+                        console.log('🎯 移动卡片到:', position);
+                        await this.moveSelectedCardTo(position.x, position.y);
+                    }
+                },
+
+                // 处理画布右键点击事件 - 复制选中卡片
+                handleCanvasRightClick(event) {
+                    event.preventDefault(); // 阻止默认右键菜单
+
+                    if (!this.isV3Mode) return;
+
+                    // 如果有选中的卡片，复制它到新位置
+                    if (this.selectedCardId) {
+                        const position = this.getCanvasPosition(event);
+                        console.log('📋 复制卡片到:', position);
+                        this.copySelectedCardTo(position.x, position.y);
+                    }
+                },
+
+                // 获取画布位置（考虑滚动偏差）
+                getCanvasPosition(event) {
+                    const canvas = document.getElementById('week-canvas-v3');
+                    const rect = canvas.getBoundingClientRect();
+
+                    // 考虑画布的滚动偏移量
+                    const x = event.clientX - rect.left + canvas.scrollLeft;
+                    const y = event.clientY - rect.top + canvas.scrollTop;
+
+                    console.log('📍 Position calculation:', { x, y });
+
+                    return { x, y };
+                },
+
+                // 注意：不再使用createFreeCard方法，改为通过数据库创建事件
+
+                // 选中卡片
+                selectCard(cardId) {
+                    console.log('🎯 选中卡片:', cardId);
+                    if (this.selectedCardId === cardId) {
+                        // 如果点击的是已选中的卡片，取消选中
+                        this.selectedCardId = null;
+                        console.log('🔘 取消选中卡片');
+                    } else {
+                        // 选中新卡片
+                        this.selectedCardId = cardId;
+                        console.log('✅ 卡片已选中:', cardId);
+                    }
+
+                    // 触发重新渲染以更新选中状态
+                    this.$nextTick(() => {
+                        this.renderCanvasCards();
+                    });
+                },
+
+                // 更新事件到数据库（用于移动卡片后的自动更新）
+                async updateEventInDatabase(card) {
+                    console.log('🔍 [DEBUG] updateEventInDatabase 开始执行');
+                    console.log('🔍 [DEBUG] 输入卡片数据:', JSON.stringify(card, null, 2));
+                    console.log('🔍 [DEBUG] 当前 freeCanvasCards 数组长度:', this.freeCanvasCards.length);
+
+                    try {
+                        const eventData = {
+                            name: card.name,
+                            event_date: card.event_date,
+                            time_slot: parseInt(card.time_slot),
+                            domain_id: card.domain_id || null,
+                            activity_type_id: card.activity_type_id || null,
+                            schedule_id: card.schedule_id || null,
+                            notes: card.notes || '',
+                            status: card.status || 'planned',
+                            goal: card.goal || '',
+                            duration: parseInt(card.duration) || 60,
+                            start_time: card.start_time ? this.formatTimeForAPI(card.start_time) : null,
+                            is_precise: !!card.is_precise,
+                            canvas_position_y: card.canvas_position_y || 0,
+                            // 确保x和y坐标为整数
+                            x: card.x ? Math.round(card.x) : null,
+                            y: card.y ? Math.round(card.y) : null
+                        };
+
+                        console.log('🔍 [DEBUG] 准备发送到API的数据:', JSON.stringify(eventData, null, 2));
+                        console.log('🔄 移动后更新数据库:', eventData);
+
+                        const response = await fetch(`/api/events/${card.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(eventData)
+                        });
+
+                        console.log('🔍 [DEBUG] API响应状态:', response.status);
+                        console.log('🔍 [DEBUG] API响应头:', Object.fromEntries(response.headers.entries()));
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('🔍 [DEBUG] API错误响应内容:', errorText);
+                            throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                        }
+
+                        const updatedEvent = await response.json();
+                        console.log('✅ 卡片位置更新成功:', updatedEvent);
+                        console.log('🔍 [DEBUG] updateEventInDatabase 执行完成');
+
+                    } catch (error) {
+                        console.error('❌ 更新卡片位置失败:', error);
+                        console.error('🔍 [DEBUG] 错误堆栈:', error.stack);
+                        alert('移动卡片失败，请重试: ' + error.message);
+                        throw error; // 重新抛出错误以便上层处理
+                    }
+                },
+
+                // 移动选中的卡片到指定位置
+                async moveSelectedCardTo(x, y) {
+                    console.log('🔍 [DEBUG] moveSelectedCardTo 开始执行');
+                    console.log('🔍 [DEBUG] 目标位置:', { x, y });
+                    console.log('🔍 [DEBUG] 选中卡片ID:', this.selectedCardId);
+                    console.log('🔍 [DEBUG] 当前 freeCanvasCards 数组长度:', this.freeCanvasCards.length);
+
+                    if (!this.selectedCardId) {
+                        console.log('❌ 没有选中的卡片');
+                        return;
+                    }
+
+                    const card = this.freeCanvasCards.find(c => c.id === this.selectedCardId);
+                    console.log('🔍 [DEBUG] 找到的卡片:', card ? '存在' : '不存在');
+                    if (card) {
+                        console.log('🔍 [DEBUG] 卡片当前数据:', JSON.stringify(card, null, 2));
+                    }
+
+                    if (card) {
+                        try {
+                            console.log('🔍 [DEBUG] 开始更新卡片位置');
+
+                            // 更新卡片位置 - 确保为整数
+                            const oldPosition = { x: card.x, y: card.y };
+                            card.x = Math.max(0, Math.round(x));
+                            card.y = Math.max(0, Math.round(y));
+
+                            console.log('🔍 [DEBUG] 位置变化:', {
+                                旧位置: oldPosition,
+                                新位置: { x: card.x, y: card.y }
+                            });
+
+                            // 重新计算时间相关属性
+                            const timeData = this.calculateTimeFromPosition(card.x, card.y);
+                            console.log('🔍 [DEBUG] 计算的时间数据:', timeData);
+
+                            card.event_date = timeData.isoDate;  // 使用ISO格式日期用于数据库
+                            card.start_time = timeData.startTime;
+                            card.time_slot = this.getTimeSlotFromTime(timeData.startTime);
+
+                            console.log('📍 移动卡片到位置:', {
+                                cardId: this.selectedCardId,
+                                x: card.x,
+                                y: card.y,
+                                date: card.event_date,
+                                startTime: card.start_time,
+                                timeSlot: card.time_slot
+                            });
+
+                            console.log('🔍 [DEBUG] 调用 updateEventInDatabase 前的卡片状态:');
+                            console.log('🔍 [DEBUG] 卡片完整数据:', JSON.stringify(card, null, 2));
+
+                            // 更新数据库 - 等待完成
+                            await this.updateEventInDatabase(card);
+
+                            console.log('🔍 [DEBUG] updateEventInDatabase 调用完成，开始后续操作');
+
+                            // 移动后自动取消选中
+                            this.selectedCardId = null;
+                            console.log('🔍 [DEBUG] 已取消选中状态');
+
+                            // 触发重新渲染
+                            this.$nextTick(() => {
+                                console.log('🔍 [DEBUG] 触发重新渲染');
+                                this.renderCanvasCards();
+                            });
+
+                            console.log('✅ 卡片移动完成');
+
+                        } catch (error) {
+                            console.error('❌ 移动卡片过程中出错:', error);
+                            console.error('🔍 [DEBUG] 错误详细信息:', error.stack);
+                            alert('移动卡片失败: ' + error.message);
+                        }
+                    } else {
+                        console.error('🔍 [DEBUG] 在 freeCanvasCards 中找不到对应卡片');
+                        console.log('🔍 [DEBUG] 当前所有卡片ID:', this.freeCanvasCards.map(c => c.id));
+                    }
+                },
+
+                // 复制选中的卡片到指定位置
+                async copySelectedCardTo(x, y) {
+                    if (!this.selectedCardId) {
+                        console.log('❌ 没有选中的卡片');
+                        return;
+                    }
+
+                    const originalCard = this.freeCanvasCards.find(c => c.id === this.selectedCardId);
+                    if (originalCard) {
+                        // 计算新位置
+                        const newX = Math.max(0, Math.round(x));
+                        const newY = Math.max(0, Math.round(y));
+
+                        // 重新计算时间相关属性
+                        const timeData = this.calculateTimeFromPosition(newX, newY);
+
+                        // 为V3自由画布生成唯一的canvas_position_y
+                        const uniqueCanvasY = Date.now() % 10000; // 使用时间戳生成唯一值
+
+                        // 创建新卡片数据（复制原卡片属性）
+                        const newCardData = {
+                            name: originalCard.name,  // 保持原始名称
+                            event_date: timeData.isoDate,
+                            time_slot: this.getTimeSlotFromTime(timeData.startTime),
+                            domain_id: originalCard.domain_id || null,
+                            activity_type_id: originalCard.activity_type_id || null,
+                            schedule_id: originalCard.schedule_id || null,
+                            notes: originalCard.notes || '',
+                            status: originalCard.status || 'planned',
+                            goal: originalCard.goal || '',
+                            // V3字段
+                            duration: originalCard.duration || 60,
+                            start_time: this.formatTimeForAPI(timeData.startTime),
+                            is_precise: originalCard.is_precise || false,
+                            canvas_position_y: uniqueCanvasY,  // 使用唯一值避免冲突
+                            x: newX,
+                            y: newY
+                        };
+
+                        console.log('📋 复制卡片到位置:', {
+                            originalCardId: this.selectedCardId,
+                            newPosition: { x: newX, y: newY },
+                            date: newCardData.event_date,
+                            startTime: timeData.startTime,
+                            timeSlot: newCardData.time_slot
+                        });
+
+                        try {
+                            // 通过API创建新事件
+                            const response = await fetch('/api/events/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(newCardData)
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            const newEvent = await response.json();
+                            console.log('✅ 卡片复制成功:', newEvent);
+
+                            // 直接将新卡片添加到本地数组，避免重新加载导致其他卡片丢失
+                            const newCanvasCard = {
+                                id: newEvent.id,
+                                name: newEvent.name,
+                                event_date: newEvent.event_date,
+                                time_slot: newEvent.time_slot,
+                                domain_id: newEvent.domain_id,
+                                activity_type_id: newEvent.activity_type_id,
+                                schedule_id: newEvent.schedule_id,
+                                notes: newEvent.notes || '',
+                                status: newEvent.status,
+                                goal: newEvent.goal || '',
+                                duration: newEvent.duration || 60,
+                                start_time: newEvent.start_time,
+                                is_precise: newEvent.is_precise || false,
+                                canvas_position_y: newEvent.canvas_position_y || 0,
+                                x: newEvent.x || newX,
+                                y: newEvent.y || newY
+                            };
+
+                            // 添加到本地卡片数组
+                            this.freeCanvasCards.push(newCanvasCard);
+
+                            // 强制重新渲染画布
+                            this.$nextTick(() => {
+                                const canvasWorkspace = document.querySelector('#canvas-workspace > div');
+                                if (canvasWorkspace) {
+                                    canvasWorkspace.innerHTML = this.renderCanvasCards();
+                                }
+                            });
+
+                            // 复制后保持原卡片选中状态（不取消选中）
+                            console.log('📋 卡片复制完成，已添加到画布，原卡片保持选中状态');
+
+                        } catch (error) {
+                            console.error('❌ 复制卡片失败:', error);
+                            alert('复制卡片失败，请重试');
+                        }
+                    }
+                },
+
+                // 编辑卡片
+                editCard(cardId) {
+                    console.log('📝 编辑卡片:', cardId);
+
+                    // 从自由画布卡片中查找
+                    const card = this.freeCanvasCards.find(c => c.id === cardId);
+                    if (!card) {
+                        console.error('❌ 未找到卡片:', cardId);
+                        return;
+                    }
+
+                    console.log('📝 找到的卡片数据:', {
+                        id: card.id,
+                        name: card.name,
+                        notes: card.notes,
+                        status: card.status,
+                        全部字段: card
+                    });
+
+                    // 根据卡片位置计算时间属性
+                    const timeData = this.calculateTimeFromPosition(card.x, card.y);
+
+                    console.log('📝 卡片位置和时间数据:', {
+                        cardId: card.id,
+                        position: { x: card.x, y: card.y },
+                        calculatedTime: timeData,
+                        storedDate: card.event_date,
+                        currentWeekDates: this.weekDates
+                    });
+
+                    // 准备编辑数据（优先使用位置计算的时间）
+                    this.editingEvent = {
+                        id: card.id,
+                        name: card.name || '',
+                        event_date: timeData.isoDate, // 使用位置计算的ISO日期
+                        time_slot: this.getTimeSlotFromTime(timeData.startTime), // 根据计算时间获取时间槽
+                        domain_id: card.domain_id ? String(card.domain_id) : '',
+                        activity_type_id: card.activity_type_id ? String(card.activity_type_id) : '',
+                        schedule_id: card.schedule_id ? String(card.schedule_id) : '',
+                        notes: card.notes || '',
+                        status: card.status || 'planned',
+                        // V3字段
+                        duration: card.duration || 60,
+                        start_time: timeData.startTime, // 使用位置计算的时间
+                        is_precise: card.is_precise || false,
+                        canvas_position_y: card.canvas_position_y || 0,
+                        x: card.x,
+                        y: card.y
+                    };
+
+                    console.log('📝 准备编辑的事件数据:', this.editingEvent);
+                    this.showEditEventModal = true;
+                },
+
+                // 根据卡片位置计算时间属性
+                calculateTimeFromPosition(x, y) {
+                    // 使用与双击创建相同的动态列宽计算
+                    const canvasElement = document.getElementById('week-canvas-v3');
+                    const canvasWidth = canvasElement ? canvasElement.offsetWidth : 1050;
+                    const timeAxisWidth = 80;
+                    const availableWidth = canvasWidth - timeAxisWidth;
+                    const columnWidth = availableWidth / 7;
+
+                    console.log('🧮 位置计算参数:', {
+                        x, y, canvasWidth, timeAxisWidth, availableWidth, columnWidth
+                    });
+
+                    // 计算日期偏移（基于X坐标，减去时间轴宽度）
+                    const adjustedX = Math.max(0, x - timeAxisWidth);
+                    const dayOffset = Math.floor(adjustedX / columnWidth);
+                    const targetDate = new Date(this.currentDate);
+                    const weekStart = new Date(this.currentDate);
+                    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // 周一为起始
+                    targetDate.setTime(weekStart.getTime());
+                    targetDate.setDate(weekStart.getDate() + dayOffset);
+
+                    // 计算时间（基于Y坐标）
+                    const headerOffset = 60; // 顶部偏移
+                    const timeStartHour = 7; // 7:00开始
+                    const gridUnit = 10 * this.v3ZoomLevel; // 网格单位
+
+                    if (y < headerOffset) {
+                        const isoDate = targetDate.toISOString().split('T')[0];
+                        const result = {
+                            date: this.formatDate(isoDate),
+                            isoDate: isoDate,
+                            startTime: '07:00'
+                        };
+                        console.log('🕰️ 位置时间计算结果 (顶部):', result);
+                        return result;
+                    }
+
+                    // 计算从7:00开始的分钟数
+                    const minutesFromStart = Math.floor((y - headerOffset) / gridUnit) * 10;
+
+                    // 添加10分钟偏移以修正画布位置和编辑窗口时间的偏差
+                    const correctedMinutes = minutesFromStart + 10;
+
+                    // 转换为具体时间
+                    const totalMinutes = timeStartHour * 60 + correctedMinutes;
+                    const hour = Math.floor(totalMinutes / 60);
+                    const minute = totalMinutes % 60;
+
+                    const startTime = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+
+                    const isoDate = targetDate.toISOString().split('T')[0];
+                    const result = {
+                        date: this.formatDate(isoDate),
+                        isoDate: isoDate,
+                        startTime: startTime
+                    };
+
+                    console.log('🕰️ 位置时间计算结果:', result);
+                    return result;
+                },
+
+                // 加载自由画布卡片数据
+                loadFreeCanvasCards() {
+                    console.log('🔍 [DEBUG] loadFreeCanvasCards 开始执行');
+                    console.log('🔍 [DEBUG] 当前 weekSchedule 数据:', this.weekSchedule);
+                    console.log('🔍 [DEBUG] 清空前 freeCanvasCards 数组长度:', this.freeCanvasCards.length);
+
+                    this.freeCanvasCards = [];
+
+                    let loadedCount = 0;
+                    // 遍历所有周日程数据，转换为自由画布卡片
+                    for (const day in this.weekSchedule) {
+                        console.log('🔍 [DEBUG] 处理日期:', day, '数据:', this.weekSchedule[day]);
+                        for (const slotKey in this.weekSchedule[day]) {
+                            const eventData = this.weekSchedule[day][slotKey];
+                            console.log('🔍 [DEBUG] 处理时间槽:', slotKey, '事件:', eventData);
+
+                            // 处理事件数据 - 可能是单个对象或数组
+                            let events = [];
+                            if (eventData) {
+                                if (Array.isArray(eventData)) {
+                                    // 数组形式：包含多个并排摆放的事件
+                                    events = eventData.filter(e => e && e.id);
+                                    console.log('🔍 [DEBUG] 数组事件，包含', events.length, '个有效事件');
+                                } else if (eventData.id) {
+                                    // 单个对象形式
+                                    events = [eventData];
+                                    console.log('🔍 [DEBUG] 单个事件');
+                                }
+                            }
+
+                            // 处理每个事件
+                            for (const event of events) {
+                                // 转换为自由画布卡片格式
+                                const canvasCard = {
+                                    id: event.id,
+                                    name: event.name || event.activity_name || '未命名',
+                                    event_date: event.event_date || day,
+                                    time_slot: event.time_slot || slotKey,
+                                    domain_id: event.domain_id,
+                                    activity_type_id: event.activity_type_id,
+                                    schedule_id: event.schedule_id,
+                                    notes: event.notes,
+                                    status: event.status || 'planned',
+                                    goal: event.goal,
+                                    // V3字段
+                                    duration: event.duration || 60,
+                                    start_time: event.start_time,
+                                    is_precise: event.is_precise || false,
+                                    canvas_position_y: event.canvas_position_y || 0,
+                                    // 位置字段 - 支持并排摆放
+                                    x: event.x || this.calculateXFromDate(day),
+                                    y: event.y || this.calculateYFromTimeWithOffset(event.start_time || '8:00', event.canvas_position_y || 0)
+                                };
+                                this.freeCanvasCards.push(canvasCard);
+                                loadedCount++;
+                                console.log('🔍 [DEBUG] 加载卡片 #' + loadedCount + ':', {
+                                    id: event.id,
+                                    name: canvasCard.name,
+                                    x: canvasCard.x,
+                                    y: canvasCard.y,
+                                    完整数据: canvasCard
+                                });
+                            }
+                        }
+                    }
+
+                    console.log('🎨 自由画布卡片加载完成:', this.freeCanvasCards.length, '张卡片');
+                    console.log('🔍 [DEBUG] 所有加载的卡片ID:', this.freeCanvasCards.map(c => c.id));
+                    console.log('🎨 所有卡片数据:', this.freeCanvasCards);
+                },
+
+                // 根据日期计算X坐标（使用动态列宽）
+                calculateXFromDate(dateStr) {
+                    const dayIndex = this.weekDates.indexOf(dateStr);
+                    if (dayIndex < 0) return 80; // 默认时间轴位置
+
+                    // 使用动态列宽计算
+                    const canvasElement = document.getElementById('week-canvas-v3');
+                    const canvasWidth = canvasElement ? canvasElement.offsetWidth : 1050;
+                    const timeAxisWidth = 80;
+                    const availableWidth = canvasWidth - timeAxisWidth;
+                    const columnWidth = availableWidth / 7;
+
+                    return timeAxisWidth + dayIndex * columnWidth;
+                },
+
+                // 根据时间计算Y坐标
+                calculateYFromTime(timeStr) {
+                    if (!timeStr) return 60; // 默认在7:00位置
+
+                    const [hours, minutes] = timeStr.split(':').map(Number);
+                    const totalMinutes = hours * 60 + minutes;
+                    const baseMinutes = 7 * 60; // 7:00为基准
+                    const relativeMinutes = totalMinutes - baseMinutes;
+
+                    if (relativeMinutes < 0) return 60; // 最小位置
+
+                    // 使用分钟精度而不是小时精度
+                    return 60 + Math.floor(relativeMinutes / 10) * 10; // 60px为头部偏移，每10分钟10px
+                },
+
+                // 根据时间和canvas_position_y计算Y坐标（支持并排摆放）
+                calculateYFromTimeWithOffset(timeStr, canvasPositionY) {
+                    const baseY = this.calculateYFromTime(timeStr);
+
+                    // 如果canvas_position_y为0或异常大（超过100），使用基础位置
+                    if (!canvasPositionY || canvasPositionY === 0 || canvasPositionY > 100) {
+                        if (canvasPositionY > 100) {
+                            console.log('🔧 [FIX] 忽略异常canvas_position_y值:', canvasPositionY, '使用基础位置');
+                        }
+                        return baseY;
+                    }
+
+                    // 为小的canvas_position_y添加合理偏移
+                    const verticalOffset = canvasPositionY * 10;   // 轻微垂直错位，最多几十像素
+
+                    console.log('🔍 [DEBUG] 计算并排位置:', {
+                        timeStr,
+                        canvasPositionY,
+                        baseY,
+                        finalY: baseY + verticalOffset,
+                        verticalOffset
+                    });
+
+                    return baseY + verticalOffset;
                 },
 
                 // 渲染时间轴
                 renderTimeAxis() {
                     let html = '';
-
-                    const hours = this.v3TimeEnd - this.v3TimeStart + 1; // 修复：17小时（包含23:00）
-                    const gridHeight = hours * 6 * 10 * this.v3ZoomLevel; // 17小时 × 6格/小时 × 10px × 缩放
                     const headerHeight = 50; // 日期标题行高度
 
                     // 添加空白标题格子，与日期标题行对齐
@@ -4014,12 +5010,12 @@
                         </div>
                     `;
 
-                    // 现在小时标记从header下方开始，与网格对齐
-                    for (let hour = this.v3TimeStart; hour <= this.v3TimeEnd; hour++) {
-                        const relativeHour = hour - this.v3TimeStart;
-                        const top = headerHeight + (relativeHour * 60 * this.v3ZoomLevel);
+                    // 渲染小时标记 (7:00 - 23:00)
+                    for (let hour = 7; hour <= 23; hour++) {
+                        const relativeHour = hour - 7;
+                        const top = headerHeight + (relativeHour * 60); // 每小时60px
                         html += `
-                            <div class="hour-marker" style="top: ${top}px; height: ${60 * this.v3ZoomLevel}px;">
+                            <div class="hour-marker" style="top: ${top}px; height: 60px;">
                                 ${hour.toString().padStart(2, '0')}:00
                             </div>
                         `;
@@ -4031,13 +5027,11 @@
                 // 渲染网格线
                 renderGridLines() {
                     let html = '';
-
-                    // 修复：7:00-23:00实际是17小时（包含23:00这个完整小时）
-                    const hours = this.v3TimeEnd - this.v3TimeStart + 1; // 7到23包含23，应该是17小时
+                    const hours = 23 - 7 + 1; // 7:00-23:00共17小时
                     const totalGrids = hours * 6; // 17小时 × 6格/小时 = 102个10分钟格
 
                     for (let i = 0; i <= totalGrids; i++) {
-                        const top = i * 10 * this.v3ZoomLevel; // 每个网格10px × 缩放
+                        const top = i * 10; // 每个网格10px
                         const isHourLine = i % 6 === 0; // 每6个网格是一小时
 
                         html += `
@@ -4058,109 +5052,6 @@
                     return `${weekday}\n${dateStr}`;
                 },
 
-                // 渲染单天的任务卡片
-                renderDayCardsV3(day) {
-                    try {
-                        let html = '';
-
-                        // 获取该日期的所有事件
-                        const dayData = this.weekSchedule[day];
-                        if (!dayData) {
-                            console.log('No events for day:', day);
-                            return ''; // 返回空字符串而不是undefined
-                        }
-
-                        const events = Object.values(dayData);
-                        // console.log(`Rendering ${events.length} events for ${day}`);
-
-                        events.forEach(event => {
-                            try {
-                                if (event && event.id) { // 添加null和id检查
-                                    const cardHtml = this.renderTaskCardV3(event);
-                                    if (cardHtml) {
-                                        html += cardHtml;
-                                    }
-                                } else {
-                                    // 静默跳过null事件，避免控制台噪音
-                                }
-                            } catch (error) {
-                                console.error('Error rendering card for event:', event, error);
-                            }
-                        });
-
-                        return html;
-                    } catch (error) {
-                        console.error('Error in renderDayCardsV3:', error);
-                        return ''; // 确保始终返回字符串
-                    }
-                },
-
-                // 渲染单个任务卡片
-                renderTaskCardV3(event) {
-                    console.log('🎯 Rendering card for event:', event.id, 'start_time:', event.start_time, 'time_slot:', event.time_slot);
-
-                    // 安全获取duration，处理null/undefined情况
-                    const duration = (event.duration !== null && event.duration !== undefined) ? event.duration : 60;
-                    const heightPx = Math.max((duration / 10) * 10 * this.v3ZoomLevel, 20 * this.v3ZoomLevel); // 最小20px × 缩放
-
-                    // 计算位置 - 优先使用start_time，回退到time_slot
-                    let topPx = 0;
-                    let timeForCalculation = null;
-
-                    if (event.start_time && event.start_time !== 'None' && event.start_time !== null) {
-                        // 有起始时间 - 直接解析start_time（精确和模糊都有start_time）
-                        console.log('🕐 Using start_time for position:', event.start_time);
-                        timeForCalculation = event.start_time;
-                        const [hours, minutes] = event.start_time.split(':').map(Number);
-                        const totalMinutes = hours * 60 + minutes;
-                        const relativeMinutes = totalMinutes - (this.v3TimeStart * 60); // 相对于7:00的分钟数
-                        topPx = Math.max(0, (relativeMinutes / 10) * 10 * this.v3ZoomLevel); // 转换为网格单位并缩放
-                        console.log('🎯 Calculated position:', { totalMinutes, relativeMinutes, topPx });
-                    } else {
-                        // 回退到time_slot（兼容旧数据）
-                        console.log('🕐 Using time_slot for position:', event.time_slot);
-                        const slotTimes = {
-                            21: 8 * 60,   // 上午第1时段: 8:00
-                            22: 10 * 60,  // 上午第2时段: 10:00
-                            51: 14 * 60,  // 下午第1时段: 14:00
-                            52: 16 * 60,  // 下午第2时段: 16:00
-                            71: 19 * 60   // 晚上时段: 19:00
-                        };
-                        const totalMinutes = slotTimes[event.time_slot] || (8 * 60);
-                        const relativeMinutes = totalMinutes - (this.v3TimeStart * 60);
-                        topPx = Math.max(0, (relativeMinutes / 10) * 10 * this.v3ZoomLevel);
-
-                        // 为了调试，计算等效的start_time
-                        const hours = Math.floor(totalMinutes / 60);
-                        const minutes = totalMinutes % 60;
-                        timeForCalculation = hours + ':' + minutes.toString().padStart(2, '0');
-                        console.log('🎯 Time slot', event.time_slot, 'converted to time:', timeForCalculation);
-                    }
-
-                    // 并行任务位置调整
-                    const parallelClass = event.canvas_position_y > 0 ? 'parallel' : '';
-                    const preciseClass = event.is_precise ? 'precise' : '';
-
-                    console.log('🎯 Final render - topPx:', topPx, 'heightPx:', heightPx, 'timeForCalculation:', timeForCalculation);
-
-                    return `
-                        <div class="task-card-v3 ${preciseClass} ${parallelClass}"
-                             style="top: ${topPx}px; height: ${heightPx}px;"
-                             data-event-id="${event.id}"
-                             data-duration="${duration}"
-                             ondblclick="window.laeAppInstance.editEventV3(${event.id}); event.stopPropagation(); return false;"
-                             onclick="event.stopPropagation(); return false;">
-                            <div class="task-card-title">
-                                ${event.name || event.activity_name || '未命名任务'}
-                            </div>
-                            <div class="task-card-meta">
-                                ${timeForCalculation || '未设置时间'}
-                                ${event.is_precise ? ' (精确)' : ' (10分钟精度)'}
-                                (${duration}min)
-                            </div>
-                        </div>
-                    `;
-                },
 
                 // 渲染待定卡片
                 renderPendingCards() {
@@ -4829,7 +5720,7 @@
                         return;
                     }
 
-                    // 计算点击位置对应的时间
+                    // 计算点击位置对应的时间和像素坐标
                     const rect = event.currentTarget.getBoundingClientRect();
                     const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
                     const canvasContainer = document.querySelector('.canvas-grid-container');
@@ -4837,6 +5728,7 @@
                     // 🔧 修复：加入滚动偏移量
                     const scrollTop = canvasContainer ? canvasContainer.scrollTop : 0;
                     const relativeY = event.clientY - canvasRect.top - 60 + scrollTop; // 减去header高度，加上滚动偏移
+                    const relativeX = event.clientX - canvasRect.left; // X坐标（相对于画布）
 
                     // 计算对应的时间（吸附到10分钟网格）
                     const minutesFromStart = Math.max(0, Math.round(relativeY / (10 * this.v3ZoomLevel)) * 10);
@@ -4848,6 +5740,10 @@
 
                     // 计算起始时间
                     const startTimeStr = clickHour + ':' + clickMinute.toString().padStart(2, '0');
+
+                    // 计算卡片应该放置的像素位置（吸附到网格）
+                    const snapY = 60 + Math.round(relativeY / (10 * this.v3ZoomLevel)) * (10 * this.v3ZoomLevel);
+                    const snapX = Math.round(relativeX / 150) * 150; // 按列对齐
 
                     console.log('🎯 Double click calculated time:', startTimeStr);
                     console.log('🎯 Selected node for V3 creation:', this.selectedNode);
@@ -4867,7 +5763,10 @@
                             duration: 60,
                             start_time: startTimeStr,
                             is_precise: false,
-                            canvas_position_y: 0
+                            canvas_position_y: 0,
+                            // V3 自由画布位置
+                            x: snapX,
+                            y: snapY
                         };
                         console.log('✨ Created V3 event with selected node:', this.selectedNode.name);
                     } else {
@@ -4884,7 +5783,10 @@
                             duration: 60,
                             start_time: startTimeStr,
                             is_precise: false,
-                            canvas_position_y: 0
+                            canvas_position_y: 0,
+                            // V3 自由画布位置
+                            x: snapX,
+                            y: snapY
                         };
                         console.log('📄 Created V3 event from blank');
                     }
@@ -5680,9 +6582,10 @@
                 async initSummaryData() {
                     console.log('Initializing summary data...');
                     await this.generateAvailableMonths();
-                    await this.loadSummaryStatistics();
-                    await this.loadActivityStatistics();
+                    await this.loadSummaryStatistics();  // V1统计数据
+                    await this.loadActivityStatistics();  // V1活动统计
                     await this.loadDomainScheduleCounts();  // 加载Domain的Schedule数量
+                    await this.loadV3Statistics();  // V3统计数据：Domain和ActivityType的卡片统计
                 },
                 
                 generateAvailableMonths() {

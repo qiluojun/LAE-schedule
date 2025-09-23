@@ -126,6 +126,35 @@ The system is now ready for production use. Future enhancements may include:
 
 ## Development Workflow
 
+### 🧠 CRITICAL: Context Management
+
+**AUTOMATIC CONVERSATION MANAGEMENT**: When context usage falls below 10%:
+
+1. **Auto-Pause Current Work**: Stop current development activities
+2. **Update Progress Documentation**: Save current progress to README.md or relevant documentation
+3. **Create Status Summary**: Document what was completed and what's next
+4. **Recommend Conversation End**: Inform user about low context and suggest ending conversation
+5. **Provide Handoff Notes**: Give clear instructions for continuing in next conversation
+
+**Context Management Guidelines**:
+- Monitor context usage throughout conversation
+- When context drops to ~10%, prioritize saving progress over continuing work
+- Always update project documentation before ending conversation
+- Provide clear "next steps" for continuation
+
+**Example Context Warning**:
+```
+⚠️ Context Usage Alert: Currently at 8% remaining context.
+
+Progress Update:
+✅ Completed: Zoom functionality restoration
+✅ Completed: Click-select interaction system
+🔄 Next: Advanced features restoration
+
+I recommend ending this conversation and starting fresh.
+I've updated the progress in README.md.
+```
+
 ### ⚠️ CRITICAL: User Testing Feedback Loop
 
 **IMPORTANT WORKFLOW REQUIREMENT**: When implementing new features or fixes during development sessions:

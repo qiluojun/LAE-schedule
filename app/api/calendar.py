@@ -83,6 +83,9 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
                 "start_time": getattr(event, 'start_time', None).strftime("%H:%M") if getattr(event, 'start_time', None) else None,
                 "is_precise": getattr(event, 'is_precise', False),
                 "canvas_position_y": getattr(event, 'canvas_position_y', 0),
+                # V3.0 自由画布位置字段
+                "x": getattr(event, 'x', None),
+                "y": getattr(event, 'y', None),
                 "display_time": event.get_display_time() if hasattr(event, 'get_display_time') else None,
                 "effective_duration": event.get_effective_duration() if hasattr(event, 'get_effective_duration') else 60
             }
@@ -148,6 +151,9 @@ def get_month_schedule(year: int, month: int, db: Session = Depends(get_db)):
             "start_time": getattr(event, 'start_time', None).strftime("%H:%M") if getattr(event, 'start_time', None) else None,
             "is_precise": getattr(event, 'is_precise', False),
             "canvas_position_y": getattr(event, 'canvas_position_y', 0),
+            # V3.0 自由画布位置字段
+            "x": getattr(event, 'x', None),
+            "y": getattr(event, 'y', None),
             "display_time": event.get_display_time() if hasattr(event, 'get_display_time') else None,
             "effective_duration": event.get_effective_duration() if hasattr(event, 'get_effective_duration') else 60
         })

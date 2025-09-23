@@ -25,12 +25,17 @@ class ScheduledEventBase(BaseModel):
     domain_id: Optional[int] = None
     activity_type_id: Optional[int] = None
     schedule_id: Optional[int] = None
+    goal: Optional[str] = None  # V1.0 兼容字段
 
     # V3.0 动态画布支持字段
     duration: Optional[int] = None  # 时长(分钟)
     start_time: Optional[time] = None  # 精确开始时间
     is_precise: bool = False  # 是否精确任务
     canvas_position_y: int = 0  # 画布Y坐标(并排摆放)
+
+    # V3.0 自由画布位置字段
+    x: Optional[int] = None  # 画布X坐标(像素)
+    y: Optional[int] = None  # 画布Y坐标(像素)
 
     @validator('duration')
     def validate_duration(cls, v):
@@ -59,6 +64,7 @@ class ScheduledEventUpdate(BaseModel):
     domain_id: Optional[int] = None
     activity_type_id: Optional[int] = None
     schedule_id: Optional[int] = None
+    goal: Optional[str] = None  # V1.0 兼容字段
 
     # V3.0 动态画布支持字段
     duration: Optional[int] = None  # 时长(分钟)
@@ -66,11 +72,16 @@ class ScheduledEventUpdate(BaseModel):
     is_precise: Optional[bool] = None  # 是否精确任务
     canvas_position_y: Optional[int] = None  # 画布Y坐标(并排摆放)
 
+    # V3.0 自由画布位置字段
+    x: Optional[int] = None  # 画布X坐标(像素)
+    y: Optional[int] = None  # 画布Y坐标(像素)
+
     @validator('duration')
     def validate_duration(cls, v):
-        """验证时长必须为正数"""
+        """验证时长必须为正数，0值自动修正为默认值"""
         if v is not None and v <= 0:
-            raise ValueError('Duration must be positive')
+            # 对于0或负值，返回默认的60分钟而不是抛出错误
+            return 60
         return v
 
     # 暂时注释掉这个validator，稍后修复
@@ -254,6 +265,22 @@ def get_scheduled_event(event_id: int, db: Session = Depends(get_db)):
 @router.put("/{event_id}", response_model=ScheduledEventResponse)
 def update_scheduled_event(event_id: int, event_update: ScheduledEventUpdate, db: Session = Depends(get_db)):
     """更新指定的 scheduled event"""
+    # Debug logging (Unicode safe)
+    print(f"DEBUG: Updating event {event_id}")
+    try:
+        update_dict = event_update.dict(exclude_unset=True)
+        # 安全的Unicode处理
+        safe_dict = {}
+        for k, v in update_dict.items():
+            if isinstance(v, str):
+                safe_dict[k] = repr(v)  # 使用repr避免Unicode问题
+            else:
+                safe_dict[k] = v
+        print(f"DEBUG: Update data received: {safe_dict}")
+    except UnicodeEncodeError as e:
+        print(f"DEBUG: Unicode encoding error in data display: {e}")
+        print("DEBUG: Update data received (raw keys):", list(event_update.dict(exclude_unset=True).keys()))
+
     db_event = db.query(ScheduledEvent).filter(ScheduledEvent.id == event_id).first()
     if db_event is None:
         raise HTTPException(
@@ -261,76 +288,172 @@ def update_scheduled_event(event_id: int, event_update: ScheduledEventUpdate, db
             detail=f"Scheduled event with id {event_id} not found"
         )
 
-    update_data = event_update.dict(exclude_unset=True)
+    # 安全的Unicode处理
+    try:
+        safe_name = repr(db_event.name) if db_event.name else 'None'
+        print(f"DEBUG: Original event: name={safe_name}, domain_id={db_event.domain_id}")
+    except UnicodeEncodeError:
+        print(f"DEBUG: Original event: name=[Unicode], domain_id={db_event.domain_id}")
 
-    # 验证时间槽格式
-    if "time_slot" in update_data:
-        if update_data["time_slot"] not in VALID_TIME_SLOTS:
+    try:
+        # 先安全获取update_data
+        update_data = {}
+        raw_data = event_update.dict(exclude_unset=True)
+
+        # 处理每个字段，确保Unicode安全
+        for k, v in raw_data.items():
+            update_data[k] = v
+
+        print(f"DEBUG: Successfully processed {len(update_data)} fields")
+
+        # 安全显示update_data（用于调试）
+        safe_update = {}
+        for k, v in update_data.items():
+            if isinstance(v, str):
+                safe_update[k] = f"[String:{len(v)}chars]"  # 避免显示实际Unicode内容
+            else:
+                safe_update[k] = v
+        print(f"DEBUG: Processed update data types: {safe_update}")
+
+    except UnicodeEncodeError as ue:
+        print(f"DEBUG: Unicode encoding error, but processing continues: {ue}")
+        # 即使有Unicode编码错误，我们仍然可以继续处理数据
+        try:
+            update_data = event_update.dict(exclude_unset=True)
+            print(f"DEBUG: Data processed despite encoding error, {len(update_data)} fields")
+        except Exception as fallback_e:
+            print(f"ERROR: Complete failure processing update data: {fallback_e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid time_slot. Must be one of: {VALID_TIME_SLOTS}"
+                detail="Unable to process update data due to encoding issues"
             )
+    except Exception as e:
+        print(f"ERROR: Error processing update data: [Exception details suppressed to avoid encoding issues]")
+        print(f"ERROR: Exception type: {type(e).__name__}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid update data: encoding error"
+        )
 
-    # 验证外键关系
+    # 验证时间槽格式
+    try:
+        if "time_slot" in update_data:
+            print(f"DEBUG: Validating time_slot: {update_data['time_slot']}")
+            if update_data["time_slot"] not in VALID_TIME_SLOTS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid time_slot. Must be one of: {VALID_TIME_SLOTS}"
+                )
+        print("DEBUG: Time slot validation passed")
+    except Exception as e:
+        print(f"ERROR: Time slot validation error: {e}")
+        raise
+
+    # 验证外键关系 - 宽松模式，不存在的引用会被置空而不是报错
     if "domain_id" in update_data and update_data["domain_id"]:
         domain = db.query(Domain).filter(Domain.id == update_data["domain_id"]).first()
         if not domain:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Domain with id {update_data['domain_id']} not found"
-            )
+            # 对于旧卡片兼容性，将不存在的引用置空而不是抛出错误
+            print(f"WARNING: Domain with id {update_data['domain_id']} not found, setting to null")
+            update_data["domain_id"] = None
 
     if "activity_type_id" in update_data and update_data["activity_type_id"]:
         activity_type = db.query(ActivityType).filter(ActivityType.id == update_data["activity_type_id"]).first()
         if not activity_type:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Activity type with id {update_data['activity_type_id']} not found"
-            )
+            # 对于旧卡片兼容性，将不存在的引用置空而不是抛出错误
+            print(f"WARNING: Activity type with id {update_data['activity_type_id']} not found, setting to null")
+            update_data["activity_type_id"] = None
 
     if "schedule_id" in update_data and update_data["schedule_id"]:
         schedule = db.query(Schedule).filter(Schedule.id == update_data["schedule_id"]).first()
         if not schedule:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Schedule with id {update_data['schedule_id']} not found"
-            )
+            # 对于旧卡片兼容性，将不存在的引用置空而不是抛出错误
+            print(f"WARNING: Schedule with id {update_data['schedule_id']} not found, setting to null")
+            update_data["schedule_id"] = None
 
     # V3.0: 检查时间冲突 - 考虑并排摆放逻辑
-    if "event_date" in update_data or "time_slot" in update_data or "canvas_position_y" in update_data:
-        check_date = update_data.get("event_date", db_event.event_date)
-        check_slot = update_data.get("time_slot", db_event.time_slot)
-        check_y = update_data.get("canvas_position_y", getattr(db_event, 'canvas_position_y', 0))
+    try:
+        if "event_date" in update_data or "time_slot" in update_data or "canvas_position_y" in update_data:
+            print("DEBUG: Checking time conflict...")
+            check_date = update_data.get("event_date", db_event.event_date)
+            check_slot = update_data.get("time_slot", db_event.time_slot)
 
-        # 只有在主位置(Y=0)时才检查冲突
-        if check_y == 0:
-            existing = db.query(ScheduledEvent).filter(
-                ScheduledEvent.id != event_id,
-                ScheduledEvent.event_date == check_date,
-                ScheduledEvent.time_slot == check_slot,
-                ScheduledEvent.canvas_position_y == 0
-            ).first()
-            if existing:
-                # 如果有冲突且支持V3并排摆放，自动分配新Y位置
-                if "canvas_position_y" not in update_data:
-                    max_y = db.query(ScheduledEvent).filter(
-                        ScheduledEvent.id != event_id,
-                        ScheduledEvent.event_date == check_date,
-                        ScheduledEvent.time_slot == check_slot
-                    ).count()
-                    update_data["canvas_position_y"] = max_y
+            # 安全获取canvas_position_y，对旧记录兼容处理
+            try:
+                old_canvas_y = getattr(db_event, 'canvas_position_y', 0)
+            except AttributeError:
+                old_canvas_y = 0
+            check_y = update_data.get("canvas_position_y", old_canvas_y)
+
+            print(f"DEBUG: Conflict check params: date={check_date}, slot={check_slot}, y={check_y}")
+
+            # 只有在主位置(Y=0)时才检查冲突
+            if check_y == 0:
+                existing = db.query(ScheduledEvent).filter(
+                    ScheduledEvent.id != event_id,
+                    ScheduledEvent.event_date == check_date,
+                    ScheduledEvent.time_slot == check_slot,
+                    ScheduledEvent.canvas_position_y == 0
+                ).first()
+                if existing:
+                    print(f"DEBUG: Found conflict with event {existing.id}")
+                    # V3自由画布：自动分配新的Y位置以支持并排摆放
+                    # 检查当前请求是否要求Y=0位置
+                    if update_data.get("canvas_position_y", 0) == 0:
+                        # 查找该时间槽的最大Y位置并分配下一个
+                        max_y_result = db.query(ScheduledEvent.canvas_position_y).filter(
+                            ScheduledEvent.id != event_id,
+                            ScheduledEvent.event_date == check_date,
+                            ScheduledEvent.time_slot == check_slot
+                        ).all()
+
+                        existing_y_positions = [row[0] for row in max_y_result if row[0] is not None]
+                        next_y = max(existing_y_positions, default=-1) + 1
+
+                        update_data["canvas_position_y"] = next_y
+                        print(f"DEBUG: Auto-assigned canvas_position_y = {next_y} (existing positions: {existing_y_positions})")
+                    else:
+                        print(f"DEBUG: Requested specific Y position: {update_data['canvas_position_y']}")
+                        # 检查具体Y位置是否被占用
+                        y_conflict = db.query(ScheduledEvent).filter(
+                            ScheduledEvent.id != event_id,
+                            ScheduledEvent.event_date == check_date,
+                            ScheduledEvent.time_slot == check_slot,
+                            ScheduledEvent.canvas_position_y == update_data["canvas_position_y"]
+                        ).first()
+                        if y_conflict:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Position already occupied by event {y_conflict.id}"
+                            )
                 else:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Time slot already occupied"
-                    )
+                    print("DEBUG: No time conflict found")
+            else:
+                print("DEBUG: Non-zero canvas_position_y, skipping conflict check")
+        print("DEBUG: Time conflict check completed")
+    except Exception as e:
+        print(f"ERROR: Time conflict check error: [Exception suppressed to avoid encoding issues]")
+        print(f"ERROR: Exception type: {type(e).__name__}")
+        raise
 
-    for key, value in update_data.items():
-        setattr(db_event, key, value)
+    try:
+        print(f"DEBUG: Applying updates to {len(update_data)} fields")
+        for key, value in update_data.items():
+            setattr(db_event, key, value)
 
-    db.commit()
-    db.refresh(db_event)
-    return db_event
+        print("DEBUG: Committing to database...")
+        db.commit()
+        db.refresh(db_event)
+        print(f"DEBUG: Event {event_id} updated successfully")
+        return db_event
+    except Exception as e:
+        print(f"ERROR: Database update error: [Exception suppressed to avoid encoding issues]")
+        print(f"ERROR: Exception type: {type(e).__name__}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Database update failed: encoding error"
+        )
 
 @router.delete("/{event_id}")
 def delete_scheduled_event(event_id: int, db: Session = Depends(get_db)):

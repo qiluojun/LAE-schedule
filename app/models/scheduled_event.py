@@ -27,6 +27,10 @@ class ScheduledEvent(Base):
     is_precise = Column(Boolean, default=False, nullable=False)  # 是否精确任务
     canvas_position_y = Column(Integer, default=0, nullable=False)  # 画布Y坐标(并排摆放)
 
+    # V3.0 自由画布位置字段
+    x = Column(Integer, nullable=True)  # 画布X坐标(像素)
+    y = Column(Integer, nullable=True)  # 画布Y坐标(像素)
+
     # 关联关系
     activity = relationship("Activity", back_populates="scheduled_events")  # V1.0 兼容
     domain = relationship("Domain", back_populates="scheduled_events")
@@ -56,6 +60,65 @@ class ScheduledEvent(Base):
         }
         return time_slot_names.get(self.time_slot, f"时段{self.time_slot}")
 
+    def calculate_time_from_position(self):
+        """根据卡片位置计算时间属性"""
+        if self.x is None or self.y is None:
+            return None, None
+
+        # 计算日期偏移（基于X坐标）
+        column_width = 150  # 每列宽度
+        day_offset = int(self.x / column_width)
+
+        # 计算时间（基于Y坐标）
+        header_offset = 60  # 顶部偏移
+        time_start_hour = 7  # 7:00开始
+        pixels_per_hour = 60  # 每小时60像素
+
+        if self.y < header_offset:
+            return None, None
+
+        # 计算距离7:00的分钟数
+        minutes_from_start = int((self.y - header_offset) / pixels_per_hour * 60)
+
+        # 转换为具体时间
+        start_hour = time_start_hour + (minutes_from_start // 60)
+        start_minute = minutes_from_start % 60
+
+        # 如果是模糊任务，对齐到10分钟
+        if not self.is_precise:
+            start_minute = (start_minute // 10) * 10
+
+        from datetime import time
+        calculated_time = time(hour=start_hour, minute=start_minute)
+
+        return day_offset, calculated_time
+
+    def calculate_position_from_time(self):
+        """根据时间属性计算卡片位置"""
+        if not self.start_time:
+            return None, None
+
+        # 计算X坐标（基于日期）
+        column_width = 150
+        x = 0  # 默认第一列，实际应该基于event_date计算
+
+        # 计算Y坐标（基于时间）
+        header_offset = 60
+        time_start_hour = 7
+        pixels_per_hour = 60
+
+        # 计算距离7:00的分钟数
+        start_minutes = self.start_time.hour * 60 + self.start_time.minute
+        base_minutes = time_start_hour * 60
+        minutes_from_start = start_minutes - base_minutes
+
+        if minutes_from_start < 0:
+            minutes_from_start = 0
+
+        y = header_offset + int(minutes_from_start * pixels_per_hour / 60)
+
+        return x, y
+
     @classmethod
     def migrate_v2_to_v3(cls, v2_data):
         """V2数据迁移到V3的辅助方法"""
@@ -65,4 +128,6 @@ class ScheduledEvent(Base):
         v3_data.setdefault('is_precise', False)
         v3_data.setdefault('canvas_position_y', 0)
         v3_data.setdefault('start_time', None)
+        v3_data.setdefault('x', None)
+        v3_data.setdefault('y', None)
         return v3_data
