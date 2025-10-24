@@ -494,7 +494,7 @@
         .task-card-v3 {
             position: absolute;
             width: 120px;  /* 固定宽度 */
-            height: 60px;  /* 固定高度 */
+            min-height: 60px;  /* 最小高度 (动态高度由内联style控制) */
             background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
             border: 1px solid #ffc107;
             border-radius: 6px;
@@ -1297,9 +1297,30 @@
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label">⏱️ 预计时长</label>
-                                            <input type="text" class="form-control"
-                                                   x-bind:value="(editingEvent.duration || 60) + ' 分钟'"
-                                                   readonly style="background-color: #f8f9fa;">
+                                            <select class="form-control" x-model="editingEvent.duration">
+                                                <option value="10">10 分钟</option>
+                                                <option value="20">20 分钟</option>
+                                                <option value="30">30 分钟</option>
+                                                <option value="40">40 分钟</option>
+                                                <option value="50">50 分钟</option>
+                                                <option value="60">60 分钟 (1小时)</option>
+                                                <option value="70">70 分钟</option>
+                                                <option value="80">80 分钟</option>
+                                                <option value="90">90 分钟 (1.5小时)</option>
+                                                <option value="100">100 分钟</option>
+                                                <option value="110">110 分钟</option>
+                                                <option value="120">120 分钟 (2小时)</option>
+                                                <option value="150">150 分钟 (2.5小时)</option>
+                                                <option value="180">180 分钟 (3小时)</option>
+                                                <option value="210">210 分钟 (3.5小时)</option>
+                                                <option value="240">240 分钟 (4小时)</option>
+                                                <option value="300">300 分钟 (5小时)</option>
+                                                <option value="360">360 分钟 (6小时)</option>
+                                                <option value="420">420 分钟 (7小时)</option>
+                                                <option value="480">480 分钟 (8小时)</option>
+                                                <option value="540">540 分钟 (9小时)</option>
+                                                <option value="600">600 分钟 (10小时)</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div class="mt-2">
@@ -4329,11 +4350,19 @@
                         });
                     }
 
+                    // 🎯 动态高度计算：根据duration计算卡片高度
+                    // 规则：
+                    // - 60分钟及以下：固定60px（保证文本可读性）
+                    // - 60分钟以上：60px基础 + 每多10分钟增加10px
+                    const duration = card.duration || 60; // 默认60分钟
+                    const baseHeight = 60; // 基础高度60px
+                    const cardHeight = duration <= 60 ? baseHeight : baseHeight + (duration - 60);
+
                     return `
                         <div class="${cardClass}"
                              data-card-id="${card.id}"
                              data-event-id="${card.id}"
-                             style="left: ${card.x}px; top: ${card.y}px;"
+                             style="left: ${card.x}px; top: ${card.y}px; height: ${cardHeight}px;"
                              onclick="window.laeAppInstance.selectCard(${card.id}); event.stopPropagation();"
                              ondblclick="window.laeAppInstance.editCard(${card.id}); event.stopPropagation();">
                             <div>${card.name}</div>

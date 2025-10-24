@@ -683,16 +683,18 @@ V3将完全保持V2的交互方式：
 
 -----
 
-## 🚀 当前开发状态 (2025-10-24)
+## 🚀 当前开发状态 (V3.2 - 2025-10-24)
 
 ### 📊 最新进展总结
 
-**V3 自由画布系统 - 基础功能已完成**：
+**V3.2 自由画布系统 - 增强功能完成**：
 
   - ✅ **数据架构**：V3字段完整支持，API层面功能正常
   - ✅ **交互系统**：点击选择模式替代拖拽，操作稳定可靠
   - ✅ **核心功能**：创建、编辑、复制卡片功能完整实现
   - ✅ **待定任务区融合**：23:00网格线以下区域作为待定任务区（只有日期，无时间）
+  - ✅ **日程条集成**：V3画布顶部显示Schedule时间条（复用V2组件）
+  - ✅ **动态卡片高度**：根据duration字段（10-600分钟）动态调整卡片高度
   - ✅ **服务器运行**：[http://127.0.0.1:8009](http://127.0.0.1:8009) 正常运行
 
 **当前交互流程**：
@@ -748,23 +750,116 @@ V3将完全保持V2的交互方式：
 
 -----
 
+### 🎯 V3.2 开发记录 (2025-10-24)
+
+**✅ 任务2完成：引入日程条功能**
+
+**实现方案**：
+- 在V3画布顶部添加Schedule时间条区域（复用V2的日程条组件）
+- 替换原有的"待定任务区"位置（位于画布上方）
+- 删除"返回V2"按钮，简化界面
+
+**关键修改**：
+
+1. **HTML结构替换** ([index.html:982-984](app/templates/index.html#L982-L984))：
+   - 删除了 `pending-area-v3` 和 `grid-toggle-v3` 控制面板
+   - 添加 `schedule-timeline-container` 日程条区域
+   - 使用 `x-html="renderScheduleTimeline()"` 动态渲染
+
+2. **复用V2组件**：
+   - CSS样式已存在：`.schedule-timeline-container`, `.schedule-timeline-label`, `.schedule-timeline-day`, `.schedule-bar`
+   - JavaScript方法已存在：`renderScheduleTimeline()` ([index.html:3964+](app/templates/index.html#L3964))
+   - 配色系统：`.schedule-color-*` 预定义8种颜色
+
+**日程条结构说明**：
+- 布局：网格布局（1个标签列 + 7天列）
+- 数据来源：读取 `schedules` 表，按 `start_date` 和 `deadline` 计算跨度
+- 交互功能：点击日程条可编辑（`editScheduleFromTimeline()`）
+
+**查找相关代码的方法**：
+- 搜索关键词：`schedule-timeline-container`, `renderScheduleTimeline`, `schedule-bar`
+- CSS样式位置：[index.html:184-288](app/templates/index.html#L184-L288)
+- 渲染方法位置：[index.html:3964+](app/templates/index.html#L3964)
+
+**测试验证**：
+- ✅ V3界面顶部显示日程条区域
+- ✅ "返回V2"按钮已删除
+- ✅ 日程条网格正确对齐7天列
+- ✅ 如有Schedule数据，显示彩色日程条
+- ✅ 点击日程条可触发编辑功能
+
+-----
+
+**✅ 任务3完成：动态卡片高度功能**
+
+**需求说明**：
+- 允许修改卡片时长（duration），默认60分钟
+- 时长范围：10-600分钟，以10分钟为单位调整
+- 卡片高度根据时长动态变化
+
+**实现方案**：
+
+1. **添加时长选择器** ([index.html:1298-1324](app/templates/index.html#L1298-L1324))：
+   - 在编辑模态框中将只读的duration显示改为select下拉框
+   - 提供22个选项：10, 20, 30...600分钟
+   - 常用时长添加标注（如"60 分钟 (1小时)"）
+
+2. **动态高度计算** ([index.html:4353-4359](app/templates/index.html#L4353-L4359))：
+   - 位置：`renderFreeCard()` 方法中
+   - 计算规则：
+     ```javascript
+     // 60分钟及以下：固定60px（保证文本可读性）
+     // 60分钟以上：60px基础 + 每多1分钟增加1px
+     const duration = card.duration || 60;
+     const baseHeight = 60;
+     const cardHeight = duration <= 60 ? baseHeight : baseHeight + (duration - 60);
+     ```
+
+3. **CSS调整** ([index.html:497](app/templates/index.html#L497))：
+   - 将固定高度 `height: 60px` 改为 `min-height: 60px`
+   - 允许内联style的动态高度覆盖
+
+**高度对照表**：
+| 时长 | 实际高度 |
+|------|---------|
+| 10分钟 | 60px |
+| 30分钟 | 60px |
+| 60分钟 | 60px（基准）|
+| 90分钟 | 90px |
+| 120分钟 | 120px |
+| 180分钟 | 180px |
+| 240分钟 | 240px |
+| 600分钟 | 600px |
+
+**数据保存**：
+- `saveEditedEvent()` 方法已包含duration字段保存逻辑 ([index.html:3130](app/templates/index.html#L3130))
+- 字段类型：整数，单位为分钟
+- 默认值：60分钟
+
+**查找相关代码的方法**：
+- 时长选择器：搜索 `⏱️ 预计时长` 或 `x-model="editingEvent.duration"`
+- 高度计算：搜索 `renderFreeCard` 或 `动态高度计算`
+- 保存逻辑：搜索 `saveEditedEvent` 或 `duration: this.editingEvent.duration`
+
+**测试验证**：
+- ✅ 编辑模态框中可修改时长（10-600分钟可选）
+- ✅ 60分钟及以下卡片高度统一为60px
+- ✅ 超过60分钟的卡片高度线性增长
+- ✅ 修改时长后刷新页面，高度正确更新
+- ✅ 数据库正确保存duration值
+
+-----
+
 ### 📋 下次会话计划
-
-**任务2：引入"日程条"功能**
-- 参考V2中时间网格上方的日程bar部分
-- 日程条是与画布独立的区域，用于显示Schedule时间线
-- 实施步骤：
-  1. 用户通过控制台找到V2日程bar的相关HTML/CSS代码结构
-  2. AI分析现有代码，提出具体实现方案
-  3. 确认方案后开始实施
-
-**任务3：优化卡片高度**
-- 当前问题：所有卡片统一大小
-- 目标：卡片高度根据事件的 `duration` 字段动态计算
-- 计算公式参考：`cardHeight = (duration / 10) * gridUnit`
 
 **任务4：Obsidian集成**
 - 编写Python脚本读取今日任务卡片
 - 生成Markdown格式记录
 - 写入对应的.md文件
 - 细节待后续讨论
+
+**潜在优化任务（按需）**：
+- 卡片内容自适应显示（长时长卡片显示更多信息）
+- 日程条的创建和编辑功能增强
+- 性能优化：大量卡片渲染优化
+- 导出功能：周视图导出为图片或PDF
