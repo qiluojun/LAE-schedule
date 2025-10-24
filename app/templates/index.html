@@ -979,21 +979,8 @@
                             <div>
                                 <!-- V3画布容器 -->
                                 <div class="position-relative">
-                                    <!-- 控制面板 -->
-                                    <div class="grid-toggle-v3">
-                                        <button class="btn btn-sm btn-outline-secondary me-2" @click="isV3Mode = false">
-                                            ← 返回V2
-                                        </button>
-                                        <div class="d-flex align-items-center">
-                                            <span class="text-muted">🎨 自由画布模式</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- 待定区域 -->
-                                    <div class="pending-area-v3">
-                                        <h6 class="mb-2">📋 待定任务</h6>
-                                        <div id="pending-cards-v3" x-html="renderPendingCards()">
-                                        </div>
+                                    <!-- Schedule时间条区域（V3） -->
+                                    <div class="schedule-timeline-container" id="schedule-timeline-v3" x-html="renderScheduleTimeline()">
                                     </div>
 
                                     <!-- V3自由画布 -->
