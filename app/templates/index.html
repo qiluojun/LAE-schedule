@@ -4365,8 +4365,7 @@
                         return;
                     }
 
-                    // 获取双击位置并计算时间
-                    const rect = event.currentTarget.getBoundingClientRect();
+                    // 获取双击位置
                     const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
                     const canvasContainer = document.querySelector('.canvas-grid-container');
 
@@ -4374,13 +4373,6 @@
                     const scrollTop = canvasContainer ? canvasContainer.scrollTop : 0;
                     const relativeY = event.clientY - canvasRect.top - 60 + scrollTop;
                     const relativeX = event.clientX - canvasRect.left;
-
-                    // 计算时间（吸附到10分钟网格）
-                    const minutesFromStart = Math.max(0, Math.round(relativeY / (10 * this.v3ZoomLevel)) * 10);
-                    const correctedMinutes = this.v3ZoomLevel === 1.0 ? minutesFromStart + 10 : minutesFromStart;
-                    const clickHour = this.v3TimeStart + Math.floor(correctedMinutes / 60);
-                    const clickMinute = correctedMinutes % 60;
-                    const startTimeStr = clickHour.toString().padStart(2, '0') + ':' + clickMinute.toString().padStart(2, '0');
 
                     // 动态计算画布尺寸
                     const canvasElement = document.getElementById('week-canvas-v3');
@@ -4393,37 +4385,33 @@
                     const snapY = 60 + Math.round(relativeY / (10 * this.v3ZoomLevel)) * (10 * this.v3ZoomLevel);
                     const snapX = timeAxisWidth + Math.round((relativeX - timeAxisWidth) / columnWidth) * columnWidth;
 
-                    // 计算日期索引
-                    const dayIndex = Math.max(0, Math.min(6, Math.floor((relativeX - timeAxisWidth) / columnWidth)));
-                    const targetDay = this.weekDates[dayIndex] || this.weekDates[0];
+                    // 使用统一的时间计算函数（支持待定任务区）
+                    const timeData = this.calculateTimeFromPosition(snapX, snapY);
 
                     console.log('🎯 Double click debug:', {
                         relativeX,
+                        relativeY,
+                        snapX,
+                        snapY,
                         canvasWidth,
                         timeAxisWidth,
                         availableWidth,
                         columnWidth,
-                        adjustedX: relativeX - timeAxisWidth,
-                        dayIndex,
-                        weekDates: this.weekDates,
-                        targetDay,
-                        v3ZoomLevel: this.v3ZoomLevel,
-                        v3TimeStart: this.v3TimeStart
+                        calculatedTime: timeData
                     });
-                    console.log('🎯 Double click calculated:', { startTimeStr, snapX, snapY, targetDay });
 
                     // 根据是否有选中节点决定创建方式
                     if (this.selectedNode.id) {
                         this.newEvent = {
                             name: this.selectedNode.name,
-                            event_date: targetDay,
-                            time_slot: this.getTimeSlotFromTime(startTimeStr),
+                            event_date: timeData.isoDate,
+                            time_slot: timeData.startTime ? this.getTimeSlotFromTime(timeData.startTime) : '',
                             domain_id: this.selectedNode.type === 'domain' ? this.selectedNode.id : '',
                             activity_type_id: this.selectedNode.type === 'type' ? this.selectedNode.id : '',
                             schedule_id: '',
                             notes: '',
                             duration: 60,
-                            start_time: startTimeStr,
+                            start_time: timeData.startTime,  // 待定任务区时为 null
                             is_precise: false,
                             canvas_position_y: Date.now() % 10000,  // 唯一值避免冲突
                             x: Math.round(snapX),
@@ -4432,14 +4420,14 @@
                     } else {
                         this.newEvent = {
                             name: '',
-                            event_date: targetDay,
-                            time_slot: this.getTimeSlotFromTime(startTimeStr),
+                            event_date: timeData.isoDate,
+                            time_slot: timeData.startTime ? this.getTimeSlotFromTime(timeData.startTime) : '',
                             domain_id: '',
                             activity_type_id: '',
                             schedule_id: '',
                             notes: '',
                             duration: 60,
-                            start_time: startTimeStr,
+                            start_time: timeData.startTime,  // 待定任务区时为 null
                             is_precise: false,
                             canvas_position_y: Date.now() % 10000,  // 唯一值避免冲突
                             x: Math.round(snapX),
@@ -4834,7 +4822,29 @@
                     // 计算时间（基于Y坐标）
                     const headerOffset = 60; // 顶部偏移
                     const timeStartHour = 7; // 7:00开始
+                    const timeEndHour = 23; // 23:00结束
                     const gridUnit = 10 * this.v3ZoomLevel; // 网格单位
+
+                    // 计算23:00网格线的Y坐标（时间网格的下边界）
+                    const gridEndY = headerOffset + (timeEndHour - timeStartHour) * 60 * this.v3ZoomLevel;
+
+                    console.log('🔍 时间网格边界检测:', {
+                        y: y,
+                        gridEndY: gridEndY,
+                        isPendingArea: y > gridEndY
+                    });
+
+                    // 如果Y坐标超出23:00网格线，进入待定任务区（无时间网格区域）
+                    if (y > gridEndY) {
+                        const isoDate = targetDate.toISOString().split('T')[0];
+                        const result = {
+                            date: this.formatDate(isoDate),
+                            isoDate: isoDate,
+                            startTime: null  // 待定任务区没有具体时间
+                        };
+                        console.log('📌 位置时间计算结果 (待定任务区):', result);
+                        return result;
+                    }
 
                     if (y < headerOffset) {
                         const isoDate = targetDate.toISOString().split('T')[0];
@@ -5943,7 +5953,10 @@
                 // 计算画布高度
                 getCanvasHeight() {
                     const hours = this.v3TimeEnd - this.v3TimeStart + 1; // 修复：17小时（包含23:00）
-                    return (hours * 60 * this.v3ZoomLevel) + 60; // 17小时 × 60px/小时 × 缩放 + 顶部padding
+                    const gridHeight = hours * 60 * this.v3ZoomLevel; // 时间网格高度
+                    const headerPadding = 60; // 顶部padding
+                    const pendingAreaHeight = 200; // 待定任务区额外空间
+                    return gridHeight + headerPadding + pendingAreaHeight;
                 },
 
                 // 重新渲染V3画布
