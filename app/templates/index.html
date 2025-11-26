@@ -684,20 +684,193 @@
             background: #a8a8a8;
         }
 
-        /* 响应式适配 */
+        /* ========== 移动端响应式适配 ========== */
         @media (max-width: 768px) {
+            /* V3画布容器 - 启用水平滚动 */
             .week-canvas-v3 {
-                grid-template-columns: 60px repeat(7, 1fr);
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+                max-height: 80vh;
+            }
+
+            /* 画布网格容器 - 设置最小宽度确保7天列完整渲染 */
+            .canvas-grid-container {
+                min-width: 700px; /* 50px时间轴 + 7天×约90px */
+                width: max-content;
+            }
+
+            /* 时间轴缩小 */
+            .time-axis-v3 {
+                width: 50px;
+            }
+
+            /* 日期标题行调整偏移 */
+            .day-headers-row {
+                left: 50px; /* 与缩小后的时间轴宽度一致 */
+            }
+
+            /* 网格线层调整偏移 */
+            .grid-lines-layer {
+                left: 50px;
+            }
+
+            /* 蓝色选择线调整偏移 */
+            .selection-blue-line {
+                left: 50px !important;
+            }
+
+            /* 天列容器 - 使用固定高度替代vh */
+            .days-container {
+                min-height: 960px; /* 16小时×60px */
+            }
+
+            /* 日期列 - 使用固定高度 */
+            .day-column-v3 {
+                min-height: 960px;
+                min-width: 90px; /* 确保每列有最小宽度 */
+            }
+
+            /* 日期标题字体缩小 */
+            .day-header-v3 {
+                font-size: 0.75rem;
+                padding: 0.375rem;
+            }
+
+            /* 卡片尺寸缩小 */
+            .task-card-v3 {
+                width: 85px;  /* 从120px缩小到85px */
+                min-height: 50px;
+                font-size: 0.65rem;
+                padding: 6px;
+            }
+
+            /* 小时标记字体缩小 */
+            .hour-marker {
+                font-size: 0.65rem;
+            }
+
+            /* Schedule时间条适配 */
+            .schedule-timeline-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .schedule-timeline-label {
+                min-width: 50px;
                 font-size: 0.7rem;
             }
 
-            .time-axis-v3 {
-                grid-template-columns: 60px;
+            .schedule-bar {
+                font-size: 0.65rem;
+            }
+        }
+
+        /* 极小屏幕额外优化 */
+        @media (max-width: 480px) {
+            .week-canvas-v3 {
+                max-height: 75vh;
+            }
+
+            .canvas-grid-container {
+                min-width: 600px; /* 进一步优化 */
+            }
+
+            .day-column-v3 {
+                min-width: 75px;
             }
 
             .task-card-v3 {
+                width: 70px;
+                font-size: 0.6rem;
+                padding: 4px;
+            }
+
+            .day-header-v3 {
                 font-size: 0.7rem;
-                padding: 6px;
+                padding: 0.25rem;
+            }
+        }
+
+        /* 移动端通用优化 */
+        @media (max-width: 768px) {
+            /* V2 周视图网格适配 */
+            .week-grid {
+                grid-template-columns: 50px repeat(7, 1fr);
+                gap: 4px;
+                padding: 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                min-width: 650px;
+            }
+
+            .time-label {
+                font-size: 0.7rem;
+                min-height: 100px;
+                padding: 0.5rem 0.25rem;
+            }
+
+            .week-header {
+                font-size: 0.75rem;
+                padding: 0.375rem;
+            }
+
+            .time-slot {
+                min-height: 100px;
+                padding: 4px;
+            }
+
+            .scheduled-event {
+                font-size: 0.7rem;
+                padding: 0.5rem;
+                min-height: 50px;
+            }
+
+            /* 侧边栏层级池高度调整 */
+            .hierarchical-pool {
+                max-height: 300px;
+            }
+
+            /* 活动池高度调整 */
+            .activity-pool {
+                max-height: 300px;
+            }
+
+            /* 树节点内容字体缩小 */
+            .tree-node-content {
+                font-size: 0.85rem;
+                padding: 0.3rem 0.4rem;
+            }
+
+            /* 按钮组优化 */
+            .btn-sm {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+            }
+
+            /* 模态框优化 */
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            /* 卡片标题字体调整 */
+            .card-header {
+                font-size: 0.9rem;
+            }
+
+            /* 表单标签字体调整 */
+            .form-label {
+                font-size: 0.85rem;
+            }
+
+            /* 导航栏按钮优化 */
+            .navbar {
+                padding: 0.5rem;
+            }
+
+            /* 容器内边距优化 */
+            .container-fluid {
+                padding: 0.5rem;
             }
         }
 
