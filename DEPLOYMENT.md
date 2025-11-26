@@ -21,25 +21,56 @@ CREATE TABLE domains (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     parent_id INTEGER REFERENCES domains(id),
-    description TEXT
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 创建索引
+CREATE INDEX ix_domains_id ON domains(id);
+CREATE INDEX ix_domains_name ON domains(name);
 
 -- 创建 activity_types 表
 CREATE TABLE activity_types (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    parent_id INTEGER REFERENCES activity_types(id)
+    parent_id INTEGER REFERENCES activity_types(id),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 创建索引
+CREATE INDEX ix_activity_types_id ON activity_types(id);
+CREATE INDEX ix_activity_types_name ON activity_types(name);
 
 -- 创建 schedules 表
 CREATE TABLE schedules (
     id SERIAL PRIMARY KEY,
-    domain_id INTEGER REFERENCES domains(id),
+    domain_id INTEGER NOT NULL REFERENCES domains(id),
     name VARCHAR(255) NOT NULL,
-    start_date DATE,
-    deadline DATE,
-    status VARCHAR(50)
+    description TEXT,
+    start_date TIMESTAMP WITH TIME ZONE,
+    deadline TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(50) DEFAULT 'ongoing',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 创建索引
+CREATE INDEX ix_schedules_id ON schedules(id);
+CREATE INDEX ix_schedules_name ON schedules(name);
+CREATE INDEX ix_schedules_status ON schedules(status);
+
+-- 创建 activities 表 (V1兼容)
+CREATE TABLE activities (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    parent_id INTEGER REFERENCES activities(id),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX ix_activities_id ON activities(id);
+CREATE INDEX ix_activities_name ON activities(name);
 
 -- 创建 scheduled_events 表
 CREATE TABLE scheduled_events (
@@ -48,17 +79,23 @@ CREATE TABLE scheduled_events (
     time_slot VARCHAR(10),
     name VARCHAR(255) NOT NULL,
     notes TEXT,
-    status VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'planned',
+    activity_id INTEGER REFERENCES activities(id),
+    goal TEXT,
     domain_id INTEGER REFERENCES domains(id),
     activity_type_id INTEGER REFERENCES activity_types(id),
     schedule_id INTEGER REFERENCES schedules(id),
-    duration INTEGER DEFAULT 60,
+    duration INTEGER,
     start_time TIME,
     is_precise BOOLEAN DEFAULT FALSE,
     canvas_position_y INTEGER DEFAULT 0,
     x INTEGER,
     y INTEGER
 );
+
+-- 创建索引
+CREATE INDEX ix_scheduled_events_id ON scheduled_events(id);
+CREATE INDEX ix_scheduled_events_event_date ON scheduled_events(event_date);
 ```
 
 ## 🚀 Vercel 部署步骤

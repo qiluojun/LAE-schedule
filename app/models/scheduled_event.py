@@ -5,12 +5,12 @@ from app.database import Base
 class ScheduledEvent(Base):
     __tablename__ = "scheduled_events"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     event_date = Column(Date, nullable=False, index=True)
-    time_slot = Column(Integer, nullable=False)  # 21, 22, 51, 52, 71
-    name = Column(String, nullable=False)  # 用户自定义的行动名称
+    time_slot = Column(String(10), nullable=True)  # 改为可选，支持V3待定任务
+    name = Column(String(255), nullable=False)  # 用户自定义的行动名称
     notes = Column(Text, nullable=True)  # 备注，不参与统计
-    status = Column(String, default="planned")  # planned, completed
+    status = Column(String(50), default="planned")  # planned, completed
 
     # V1.0 兼容字段 (保持向后兼容)
     activity_id = Column(Integer, ForeignKey("activities.id"), nullable=True)
