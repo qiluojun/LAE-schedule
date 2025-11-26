@@ -52,8 +52,8 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
     
     # 组织数据为周视图格式
     schedule_grid = {}
-    time_slots = [21, 22, 51, 52, 71]
-    
+    time_slots = ["21", "22", "51", "52", "71"]  # 改为字符串以匹配数据库类型
+
     for day in week_dates:
         schedule_grid[day.isoformat()] = {
             "date": day.isoformat(),
@@ -210,15 +210,15 @@ def get_day_schedule(target_date: date, db: Session = Depends(get_db)):
     ).all()
     
     # 组织为时间槽格式
-    time_slots = [21, 22, 51, 52, 71]
+    time_slots = ["21", "22", "51", "52", "71"]  # 改为字符串以匹配数据库类型
     slot_names = {
-        21: "上午第1时段",
-        22: "上午第2时段", 
-        51: "下午第1时段",
-        52: "下午第2时段",
-        71: "晚上时段"
+        "21": "上午第1时段",
+        "22": "上午第2时段",
+        "51": "下午第1时段",
+        "52": "下午第2时段",
+        "71": "晚上时段"
     }
-    
+
     day_schedule = {}
     for slot in time_slots:
         day_schedule[slot] = {
@@ -226,7 +226,7 @@ def get_day_schedule(target_date: date, db: Session = Depends(get_db)):
             "slot_name": slot_names[slot],
             "event": None
         }
-    
+
     for event in events:
         if event.time_slot in day_schedule:
             day_schedule[event.time_slot]["event"] = {
