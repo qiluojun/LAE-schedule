@@ -12,7 +12,8 @@
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(del \"c:\\study_research\\projects\\LAE-schedule\\DEPLOYMENT_FIX.md\")"
     ],
     "deny": [],
     "ask": []

@@ -78,6 +78,7 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
                 "goal": event.goal,
                 "notes": event.notes,
                 "status": event.status,
+                "time_slot": event.time_slot,  # 显式包含 time_slot (可能为 null)
                 # V3.0 动态画布支持字段
                 "duration": getattr(event, 'duration', None),
                 "start_time": getattr(event, 'start_time', None).strftime("%H:%M") if getattr(event, 'start_time', None) else None,
@@ -90,8 +91,14 @@ def get_week_schedule(target_date: date, db: Session = Depends(get_db)):
                 "effective_duration": event.get_effective_duration() if hasattr(event, 'get_effective_duration') else 60
             }
 
+            # V3.0: 处理待定任务 (time_slot 为 null)
+            if event.time_slot is None:
+                # 待定任务不放入 slots 网格，而是添加到单独的 pending_tasks 列表
+                if "pending_tasks" not in schedule_grid[day_key]:
+                    schedule_grid[day_key]["pending_tasks"] = []
+                schedule_grid[day_key]["pending_tasks"].append(event_data)
             # V3.0: 支持并排摆放 - 如果Y位置非0，需要特殊处理
-            if event_data["canvas_position_y"] > 0:
+            elif event_data["canvas_position_y"] > 0:
                 # 对于并排任务，将其存储在列表中而不是直接覆盖
                 if not isinstance(schedule_grid[day_key]["slots"][event.time_slot], list):
                     existing = schedule_grid[day_key]["slots"][event.time_slot]

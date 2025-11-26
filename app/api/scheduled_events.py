@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/events", tags=["scheduled-events"])
 # Pydantic schemas for v2.0 with v3.0 extensions
 class ScheduledEventBase(BaseModel):
     event_date: date
-    time_slot: int
+    time_slot: Optional[str] = None  # 改为字符串且可选 (V3 待定任务支持)
     name: str
     notes: Optional[str] = None
     status: str = "planned"
@@ -57,7 +57,7 @@ class ScheduledEventCreate(ScheduledEventBase):
 
 class ScheduledEventUpdate(BaseModel):
     event_date: Optional[date] = None
-    time_slot: Optional[int] = None
+    time_slot: Optional[str] = None  # 改为字符串类型
     name: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
@@ -103,18 +103,18 @@ class ScheduledEventWithDetails(ScheduledEventResponse):
     activity_type_name: Optional[str] = None
     schedule_name: Optional[str] = None
 
-# Valid time slots remain the same
-VALID_TIME_SLOTS = [21, 22, 51, 52, 71]
+# Valid time slots - 改为字符串列表以匹配数据库类型
+VALID_TIME_SLOTS = ["21", "22", "51", "52", "71"]
 
 @router.post("/", response_model=ScheduledEventResponse, status_code=status.HTTP_201_CREATED)
 def create_scheduled_event(event: ScheduledEventCreate, db: Session = Depends(get_db)):
     """创建新的 scheduled event"""
 
-    # 验证时间槽格式
-    if event.time_slot not in VALID_TIME_SLOTS:
+    # 验证时间槽格式 (允许 null 用于待定任务)
+    if event.time_slot is not None and event.time_slot not in VALID_TIME_SLOTS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid time_slot. Must be one of: {VALID_TIME_SLOTS}"
+            detail=f"Invalid time_slot. Must be one of: {VALID_TIME_SLOTS} or null for pending tasks"
         )
 
     # 验证外键关系（如果提供）
@@ -143,8 +143,9 @@ def create_scheduled_event(event: ScheduledEventCreate, db: Session = Depends(ge
             )
 
     # V3.0: 检查时间冲突 - 考虑并排摆放逻辑
-    # 如果指定了canvas_position_y，允许并排摆放，不检查冲突
-    if event.canvas_position_y == 0:  # 只有在主位置(Y=0)时才检查冲突
+    # 待定任务 (time_slot 为 null) 不检查冲突
+    if event.time_slot is not None and event.canvas_position_y == 0:
+        # 只有在主位置(Y=0)时才检查冲突
         existing = db.query(ScheduledEvent).filter(
             ScheduledEvent.event_date == event.event_date,
             ScheduledEvent.time_slot == event.time_slot,
@@ -335,14 +336,14 @@ def update_scheduled_event(event_id: int, event_update: ScheduledEventUpdate, db
             detail="Invalid update data: encoding error"
         )
 
-    # 验证时间槽格式
+    # 验证时间槽格式 (允许 null 用于待定任务)
     try:
         if "time_slot" in update_data:
             print(f"DEBUG: Validating time_slot: {update_data['time_slot']}")
-            if update_data["time_slot"] not in VALID_TIME_SLOTS:
+            if update_data["time_slot"] is not None and update_data["time_slot"] not in VALID_TIME_SLOTS:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid time_slot. Must be one of: {VALID_TIME_SLOTS}"
+                    detail=f"Invalid time_slot. Must be one of: {VALID_TIME_SLOTS} or null for pending tasks"
                 )
         print("DEBUG: Time slot validation passed")
     except Exception as e:
@@ -387,8 +388,9 @@ def update_scheduled_event(event_id: int, event_update: ScheduledEventUpdate, db
 
             print(f"DEBUG: Conflict check params: date={check_date}, slot={check_slot}, y={check_y}")
 
-            # 只有在主位置(Y=0)时才检查冲突
-            if check_y == 0:
+            # 待定任务 (time_slot 为 null) 不检查冲突
+            # 只有在主位置(Y=0)且有时间槽时才检查冲突
+            if check_slot is not None and check_y == 0:
                 existing = db.query(ScheduledEvent).filter(
                     ScheduledEvent.id != event_id,
                     ScheduledEvent.event_date == check_date,
