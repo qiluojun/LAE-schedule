@@ -2059,7 +2059,7 @@
                     activity_id: null,
                     activity_name: '',
                     event_date: '',
-                    time_slot: 21,
+                    time_slot: "21", // 字符串类型
                     goal: '',
                     notes: '',
                     status: 'planned'
@@ -2098,7 +2098,7 @@
                         activity_id: null,
                         activity_name: '',
                         event_date: '',
-                        time_slot: 21,
+                        time_slot: "21", // 字符串类型
                         goal: '',
                         notes: '',
                         status: 'planned'
@@ -3276,12 +3276,12 @@
 
                         // 确保time_slot是有效值，如果无效则根据start_time重新计算
                         let timeSlot = this.editingEvent.time_slot;
-                        if (!timeSlot || ![21, 22, 51, 52, 71].includes(parseInt(timeSlot))) {
+                        if (!timeSlot || !["21", "22", "51", "52", "71"].includes(String(timeSlot))) {
                             if (this.editingEvent.start_time) {
                                 timeSlot = this.getTimeSlotFromTime(this.editingEvent.start_time);
                                 console.log('🔧 Recalculated time_slot from start_time:', this.editingEvent.start_time, '->', timeSlot);
                             } else {
-                                timeSlot = 21; // 默认值
+                                timeSlot = "21"; // 默认值（字符串）
                                 console.log('🔧 Using default time_slot:', timeSlot);
                             }
                         }
@@ -3291,7 +3291,7 @@
                         const eventData = {
                             name: this.editingEvent.name.trim(),
                             event_date: this.editingEvent.event_date,
-                            time_slot: parseInt(timeSlot),
+                            time_slot: String(timeSlot), // 确保为字符串
                             domain_id: this.editingEvent.domain_id && this.editingEvent.domain_id !== '' ? parseInt(this.editingEvent.domain_id) : null,
                             activity_type_id: this.editingEvent.activity_type_id && this.editingEvent.activity_type_id !== '' ? parseInt(this.editingEvent.activity_type_id) : null,
                             schedule_id: this.editingEvent.schedule_id && this.editingEvent.schedule_id !== '' ? parseInt(this.editingEvent.schedule_id) : null,
@@ -3863,7 +3863,7 @@
                         const eventData = {
                             activity_id: parseInt(activityId),
                             event_date: date,
-                            time_slot: parseInt(timeSlot),
+                            time_slot: String(timeSlot), // 字符串类型
                             goal: '',
                             notes: '',
                             status: 'planned'
@@ -5997,17 +5997,18 @@
 
                 // 根据小时获取对应的时间槽
                 getTimeSlotFromHour(hour) {
-                    if (hour >= 7 && hour < 10) return 21; // 上午第1时段
-                    if (hour >= 10 && hour < 13) return 22; // 上午第2时段
-                    if (hour >= 13 && hour < 16) return 51; // 下午第1时段
-                    if (hour >= 16 && hour < 19) return 52; // 下午第2时段
-                    if (hour >= 19 && hour <= 23) return 71; // 晚上时段
-                    return 21; // 默认
+                    // 返回字符串类型以匹配后端 API
+                    if (hour >= 7 && hour < 10) return "21"; // 上午第1时段
+                    if (hour >= 10 && hour < 13) return "22"; // 上午第2时段
+                    if (hour >= 13 && hour < 16) return "51"; // 下午第1时段
+                    if (hour >= 16 && hour < 19) return "52"; // 下午第2时段
+                    if (hour >= 19 && hour <= 23) return "71"; // 晚上时段
+                    return "21"; // 默认
                 },
 
                 // 根据时间字符串获取对应的时间槽
                 getTimeSlotFromTime(timeStr) {
-                    if (!timeStr) return 21;
+                    if (!timeStr) return "21"; // 返回字符串
 
                     const [hours] = timeStr.split(':').map(Number);
                     return this.getTimeSlotFromHour(hours);
@@ -6026,14 +6027,14 @@
                     console.log('🎯 Calculated time slot:', timeSlot);
 
                     const timeSlotNames = {
-                        21: "上午第1时段 (7-10点)",
-                        22: "上午第2时段 (10-13点)",
-                        51: "下午第1时段 (13-16点)",
-                        52: "下午第2时段 (16-19点)",
-                        71: "晚上时段 (19-23点)"
+                        "21": "上午第1时段 (7-10点)",
+                        "22": "上午第2时段 (10-13点)",
+                        "51": "下午第1时段 (13-16点)",
+                        "52": "下午第2时段 (16-19点)",
+                        "71": "晚上时段 (19-23点)"
                     };
 
-                    const result = timeSlotNames[timeSlot] || `时段${timeSlot}`;
+                    const result = timeSlotNames[String(timeSlot)] || `时段${timeSlot}`;
                     console.log('🎯 Time slot display result:', result);
                     return result;
                 },
