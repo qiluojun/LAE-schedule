@@ -1,4 +1,4 @@
-# LAE 部署指南 - Vercel + Supabase
+# LAE 部署指南 - Vercel + Supabase--V3ING
 
 ## 📋 部署前准备
 
