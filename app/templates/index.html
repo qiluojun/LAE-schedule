@@ -954,7 +954,40 @@
                         月视图
                     </button>
                 </div>
-                
+
+                <!-- 批量保存按钮组 -->
+                <div class="d-flex align-items-center gap-2 me-3">
+                    <!-- 保存按钮 -->
+                    <button
+                        class="btn btn-sm"
+                        :class="unsavedCount > 0 ? 'btn-warning' : 'btn-outline-secondary'"
+                        @click="saveAllChanges()"
+                        :disabled="isSaving || unsavedCount === 0"
+                    >
+                        <span x-show="!isSaving">💾 保存</span>
+                        <span x-show="isSaving">⏳ 保存中...</span>
+                        <span x-show="unsavedCount > 0" class="badge bg-danger ms-1" x-text="unsavedCount"></span>
+                    </button>
+
+                    <!-- 放弃修改按钮（仅在有未保存变更时显示） -->
+                    <button
+                        x-show="unsavedCount > 0"
+                        class="btn btn-sm btn-outline-danger"
+                        @click="discardAllChanges()"
+                        :disabled="isSaving"
+                        title="放弃所有未保存的变更"
+                    >
+                        ❌ 放弃
+                    </button>
+
+                    <!-- 保存状态消息 -->
+                    <span
+                        x-show="saveMessage"
+                        class="text-light small"
+                        x-text="saveMessage"
+                    ></span>
+                </div>
+
                 <!-- 当前日期显示 -->
                 <div class="navbar-text text-light">
                     <span x-text="getCurrentDateString()"></span>
@@ -1966,6 +1999,17 @@
                 domainStatistics: {},  // 存储每个Domain的统计信息（日程+卡片）
                 activityTypeStatistics: {},  // 存储每个ActivityType的统计信息
 
+                // 批量保存系统 (Phase 1 + Phase 2)
+                pendingChanges: {
+                    created: [],   // 新建的卡片 (完整的卡片数据)
+                    updated: [],   // 修改的卡片 (完整的卡片数据)
+                    deleted: []    // 删除的卡片 ID
+                },
+                unsavedCount: 0,       // 未保存的变更数量
+                isSaving: false,       // 是否正在保存
+                lastSaveTime: null,    // 最后保存时间
+                saveMessage: '',       // 保存状态消息
+
                 // v2.1 侧边栏状态
                 sidebarMode: 'domain', // 'domain' or 'type'
                 domainTree: [],
@@ -2121,6 +2165,15 @@
                     // 创建全局引用以便HTML onclick访问
                     window.laeAppInstance = this;
 
+                    // 添加页面刷新拦截（未保存变更时提醒）
+                    window.addEventListener('beforeunload', (event) => {
+                        if (this.unsavedCount > 0) {
+                            event.preventDefault();
+                            event.returnValue = `您有 ${this.unsavedCount} 项未保存的变更，确定要离开吗？`;
+                            return event.returnValue;
+                        }
+                    });
+
                     // 添加全局点击监听器来清除选择状态
                     document.addEventListener('click', (event) => {
                         // 如果点击的不是V3画布区域，清除选择状态
@@ -2176,7 +2229,193 @@
                         }, 300);
                     });
                 },
-                
+
+                // ==================== 批量保存系统 (Phase 1 + Phase 2) ====================
+
+                // 记录变更到本地待保存列表
+                recordChange(type, data) {
+                    const changeId = data.id;
+
+                    if (type === 'created') {
+                        // 新建：添加到 created 列表（如果不在其中）
+                        const existing = this.pendingChanges.created.find(c => c.id === changeId);
+                        if (existing) {
+                            // 更新数据
+                            Object.assign(existing, data);
+                        } else {
+                            this.pendingChanges.created.push(data);
+                        }
+                    } else if (type === 'updated') {
+                        // 更新：检查是否在 created 列表中
+                        const inCreated = this.pendingChanges.created.find(c => c.id === changeId);
+                        if (inCreated) {
+                            // 如果是新建的卡片，直接更新 created 列表中的数据
+                            Object.assign(inCreated, data);
+                        } else {
+                            // 否则添加/更新 updated 列表
+                            const existing = this.pendingChanges.updated.find(c => c.id === changeId);
+                            if (existing) {
+                                Object.assign(existing, data);
+                            } else {
+                                this.pendingChanges.updated.push(data);
+                            }
+                        }
+                    } else if (type === 'deleted') {
+                        // 删除：从 created 和 updated 中移除，添加到 deleted
+                        this.pendingChanges.created = this.pendingChanges.created.filter(c => c.id !== changeId);
+                        this.pendingChanges.updated = this.pendingChanges.updated.filter(c => c.id !== changeId);
+                        if (!this.pendingChanges.deleted.includes(changeId)) {
+                            this.pendingChanges.deleted.push(changeId);
+                        }
+                    }
+
+                    // 更新未保存数量
+                    this.unsavedCount = this.pendingChanges.created.length +
+                                        this.pendingChanges.updated.length +
+                                        this.pendingChanges.deleted.length;
+
+                    console.log('📊 当前未保存变更:', {
+                        created: this.pendingChanges.created.length,
+                        updated: this.pendingChanges.updated.length,
+                        deleted: this.pendingChanges.deleted.length,
+                        total: this.unsavedCount
+                    });
+                },
+
+                // 批量保存所有变更
+                async saveAllChanges() {
+                    if (this.unsavedCount === 0) {
+                        this.saveMessage = '没有需要保存的变更';
+                        setTimeout(() => this.saveMessage = '', 2000);
+                        return;
+                    }
+
+                    this.isSaving = true;
+                    this.saveMessage = '正在保存...';
+
+                    let successCount = 0;
+                    let failCount = 0;
+                    const errors = [];
+
+                    try {
+                        // 1. 处理删除操作
+                        for (const eventId of this.pendingChanges.deleted) {
+                            try {
+                                await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
+                                successCount++;
+                            } catch (error) {
+                                failCount++;
+                                errors.push(`删除事件 ${eventId} 失败: ${error.message}`);
+                            }
+                        }
+
+                        // 2. 处理新建操作
+                        for (const eventData of this.pendingChanges.created) {
+                            try {
+                                const { id, ...createData } = eventData; // 移除临时 ID
+                                const response = await fetch('/api/events/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(createData)
+                                });
+                                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                                successCount++;
+                            } catch (error) {
+                                failCount++;
+                                errors.push(`创建事件失败: ${error.message}`);
+                            }
+                        }
+
+                        // 3. 处理更新操作
+                        for (const eventData of this.pendingChanges.updated) {
+                            try {
+                                const { id, ...updateData } = eventData;
+                                const response = await fetch(`/api/events/${id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(updateData)
+                                });
+                                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                                successCount++;
+                            } catch (error) {
+                                failCount++;
+                                errors.push(`更新事件 ${eventData.id} 失败: ${error.message}`);
+                            }
+                        }
+
+                        // 保存成功后清空待保存列表
+                        if (failCount === 0) {
+                            this.pendingChanges = {
+                                created: [],
+                                updated: [],
+                                deleted: []
+                            };
+                            this.unsavedCount = 0;
+                            this.lastSaveTime = new Date();
+                            this.saveMessage = `✅ 已保存 ${successCount} 项变更`;
+                        } else {
+                            this.saveMessage = `⚠️ 保存完成：成功 ${successCount} 项，失败 ${failCount} 项`;
+                            console.error('保存错误详情:', errors);
+                            alert('部分变更保存失败，请查看控制台了解详情');
+                        }
+
+                    } catch (error) {
+                        this.saveMessage = `❌ 保存失败: ${error.message}`;
+                        console.error('批量保存错误:', error);
+                        alert('保存失败，请重试');
+                    } finally {
+                        this.isSaving = false;
+                        setTimeout(() => this.saveMessage = '', 3000);
+                    }
+                },
+
+                // 放弃所有未保存的变更
+                discardAllChanges() {
+                    if (this.unsavedCount === 0) {
+                        alert('没有需要放弃的变更');
+                        return;
+                    }
+
+                    if (confirm(`确定要放弃 ${this.unsavedCount} 项未保存的变更吗？`)) {
+                        this.pendingChanges = {
+                            created: [],
+                            updated: [],
+                            deleted: []
+                        };
+                        this.unsavedCount = 0;
+                        this.saveMessage = '已放弃所有变更';
+                        setTimeout(() => this.saveMessage = '', 2000);
+
+                        // 重新加载数据
+                        this.loadWeekSchedule();
+                    }
+                },
+
+                // 确认未保存变更对话框（用于拦截危险操作）
+                confirmUnsavedChanges() {
+                    if (this.unsavedCount === 0) {
+                        return 'continue'; // 没有未保存变更，直接继续
+                    }
+
+                    const message = `您有 ${this.unsavedCount} 项未保存的变更\n\n` +
+                                  `创建: ${this.pendingChanges.created.length} 项\n` +
+                                  `修改: ${this.pendingChanges.updated.length} 项\n` +
+                                  `删除: ${this.pendingChanges.deleted.length} 项\n\n` +
+                                  `点击"确定"保存后继续\n` +
+                                  `点击"取消"放弃变更`;
+
+                    if (confirm(message)) {
+                        return 'save'; // 保存后继续
+                    } else {
+                        // 再次确认是否放弃
+                        if (confirm('确定要放弃这些变更吗？')) {
+                            this.discardAllChanges();
+                            return 'discard'; // 放弃变更并继续
+                        }
+                        return 'cancel'; // 取消操作
+                    }
+                },
+
                 // API调用方法
                 async apiCall(endpoint, options = {}) {
                     try {
@@ -3001,14 +3240,22 @@
                 
                 // 视图切换
                 async switchView(view) {
+                    // 拦截：检查未保存变更
+                    const action = this.confirmUnsavedChanges();
+                    if (action === 'cancel') return;
+                    if (action === 'save') {
+                        await this.saveAllChanges();
+                        if (this.unsavedCount > 0) return;
+                    }
+
                     console.log('Switching from', this.currentView, 'to', view);
                     this.currentView = view;
-                    
+
                     // 切换视图时清理所有模态框状态
                     this.showNewActivityModal = false;
                     this.showEditActivityModal = false;
                     this.showEditEventModal = false;
-                    
+
                     if (view === 'week') {
                         console.log('Entering week view...');
                         console.log('Current week dates:', this.weekDates);
@@ -3093,6 +3340,15 @@
                 },
                 
                 async previousWeek() {
+                    // 拦截：检查未保存变更
+                    const action = this.confirmUnsavedChanges();
+                    if (action === 'cancel') return;
+                    if (action === 'save') {
+                        await this.saveAllChanges();
+                        // 等待保存完成后继续
+                        if (this.unsavedCount > 0) return; // 保存失败，不继续
+                    }
+
                     console.log('⬅️ 切换到上一周');
                     this.currentDate.setDate(this.currentDate.getDate() - 7);
                     this.updateWeekDates();
@@ -3111,6 +3367,14 @@
                 },
 
                 async nextWeek() {
+                    // 拦截：检查未保存变更
+                    const action = this.confirmUnsavedChanges();
+                    if (action === 'cancel') return;
+                    if (action === 'save') {
+                        await this.saveAllChanges();
+                        if (this.unsavedCount > 0) return;
+                    }
+
                     console.log('➡️ 切换到下一周');
                     this.currentDate.setDate(this.currentDate.getDate() + 7);
                     this.updateWeekDates();
@@ -4689,62 +4953,33 @@
                     });
                 },
 
-                // 更新事件到数据库（用于移动卡片后的自动更新）
-                async updateEventInDatabase(card) {
-                    console.log('🔍 [DEBUG] updateEventInDatabase 开始执行');
-                    console.log('🔍 [DEBUG] 输入卡片数据:', JSON.stringify(card, null, 2));
-                    console.log('🔍 [DEBUG] 当前 freeCanvasCards 数组长度:', this.freeCanvasCards.length);
+                // 更新事件到本地待保存列表（批量保存模式）
+                updateEventInDatabase(card) {
+                    console.log('📝 记录卡片变更到本地:', card.id);
 
-                    try {
-                        const eventData = {
-                            name: card.name,
-                            event_date: card.event_date,
-                            time_slot: parseInt(card.time_slot),
-                            domain_id: card.domain_id || null,
-                            activity_type_id: card.activity_type_id || null,
-                            schedule_id: card.schedule_id || null,
-                            notes: card.notes || '',
-                            status: card.status || 'planned',
-                            goal: card.goal || '',
-                            duration: parseInt(card.duration) || 60,
-                            start_time: card.start_time ? this.formatTimeForAPI(card.start_time) : null,
-                            is_precise: !!card.is_precise,
-                            canvas_position_y: card.canvas_position_y || 0,
-                            // 确保x和y坐标为整数
-                            x: card.x ? Math.round(card.x) : null,
-                            y: card.y ? Math.round(card.y) : null
-                        };
+                    // 构建事件数据
+                    const eventData = {
+                        id: card.id,
+                        name: card.name,
+                        event_date: card.event_date,
+                        time_slot: parseInt(card.time_slot),
+                        domain_id: card.domain_id || null,
+                        activity_type_id: card.activity_type_id || null,
+                        schedule_id: card.schedule_id || null,
+                        notes: card.notes || '',
+                        status: card.status || 'planned',
+                        goal: card.goal || '',
+                        duration: parseInt(card.duration) || 60,
+                        start_time: card.start_time ? this.formatTimeForAPI(card.start_time) : null,
+                        is_precise: !!card.is_precise,
+                        canvas_position_y: card.canvas_position_y || 0,
+                        x: card.x ? Math.round(card.x) : null,
+                        y: card.y ? Math.round(card.y) : null
+                    };
 
-                        console.log('🔍 [DEBUG] 准备发送到API的数据:', JSON.stringify(eventData, null, 2));
-                        console.log('🔄 移动后更新数据库:', eventData);
-
-                        const response = await fetch(`/api/events/${card.id}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(eventData)
-                        });
-
-                        console.log('🔍 [DEBUG] API响应状态:', response.status);
-                        console.log('🔍 [DEBUG] API响应头:', Object.fromEntries(response.headers.entries()));
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            console.error('🔍 [DEBUG] API错误响应内容:', errorText);
-                            throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-                        }
-
-                        const updatedEvent = await response.json();
-                        console.log('✅ 卡片位置更新成功:', updatedEvent);
-                        console.log('🔍 [DEBUG] updateEventInDatabase 执行完成');
-
-                    } catch (error) {
-                        console.error('❌ 更新卡片位置失败:', error);
-                        console.error('🔍 [DEBUG] 错误堆栈:', error.stack);
-                        alert('移动卡片失败，请重试: ' + error.message);
-                        throw error; // 重新抛出错误以便上层处理
-                    }
+                    // 记录到待更新列表
+                    this.recordChange('updated', eventData);
+                    console.log('✅ 变更已记录，未保存数量:', this.unsavedCount);
                 },
 
                 // 移动选中的卡片到指定位置
@@ -4799,10 +5034,10 @@
                             console.log('🔍 [DEBUG] 调用 updateEventInDatabase 前的卡片状态:');
                             console.log('🔍 [DEBUG] 卡片完整数据:', JSON.stringify(card, null, 2));
 
-                            // 更新数据库 - 等待完成
-                            await this.updateEventInDatabase(card);
+                            // 记录变更到本地（不再等待API调用）
+                            this.updateEventInDatabase(card);
 
-                            console.log('🔍 [DEBUG] updateEventInDatabase 调用完成，开始后续操作');
+                            console.log('🔍 [DEBUG] 变更已记录到本地，开始后续操作');
 
                             // 移动后自动取消选中
                             this.selectedCardId = null;
