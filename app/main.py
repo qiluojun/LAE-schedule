@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.api import scheduled_events, calendar, statistics, domains, activity_types, schedules
+from app.api import scheduled_events, calendar, statistics, domains, activity_types, schedules, config
 
 app = FastAPI(
     title="LAE - 个人日程与主支线管理系统 v2.0",
@@ -16,6 +16,9 @@ templates = Jinja2Templates(directory="app/templates")
 # V1 APIs (for backward compatibility)
 app.include_router(calendar.router, prefix="/api/calendar", tags=["calendar"])
 app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"])
+
+# Config API (for responsive canvas)
+app.include_router(config.router, tags=["config"])
 
 # V2 APIs (new architecture)
 app.include_router(domains.router, tags=["domains"])

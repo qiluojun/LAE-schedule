@@ -9,7 +9,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
-    
+
+    <!-- 🎯 移动端调试工具 Eruda（仅在移动设备上加载）-->
+    <script>
+        if (window.innerWidth < 768) {
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/eruda";
+            document.body.appendChild(script);
+            script.onload = function () { eruda.init(); };
+        }
+    </script>
+
     <style>
         .time-slot {
             min-height: 120px;
@@ -2010,6 +2020,16 @@
                 lastSaveTime: null,    // 最后保存时间
                 saveMessage: '',       // 保存状态消息
 
+                // 🎯 响应式画布配置（移动端适配）
+                pcCanvasConfig: null,  // PC端基准配置
+                isMobileDevice: false, // 是否为移动设备
+                currentDeviceConfig: { // 当前设备配置
+                    canvasWidth: 0,
+                    canvasHeight: 0,
+                    timeAxisWidth: 80,
+                    headerHeight: 60
+                },
+
                 // v2.1 侧边栏状态
                 sidebarMode: 'domain', // 'domain' or 'type'
                 domainTree: [],
@@ -2161,7 +2181,11 @@
                     console.log('Initializing LAE App... v9 - Debug Enhanced');
                     console.log('Initial view:', this.currentView);
                     console.log('Time slots configuration:', this.timeSlots);
-                    
+
+                    // 🎯 加载PC端基准配置并检测设备
+                    await this.loadPCCanvasConfig();
+                    this.detectDevice();
+
                     // 创建全局引用以便HTML onclick访问
                     window.laeAppInstance = this;
 
@@ -2228,6 +2252,162 @@
                             // v2.1 不再需要侧边栏拖拽初始化（改为选择+点击模式）
                         }, 300);
                     });
+                },
+
+                // ==================== 响应式画布系统（移动端适配）====================
+
+                // 加载PC端基准配置
+                async loadPCCanvasConfig() {
+                    try {
+                        const config = await this.apiCall('/config/canvas');
+                        this.pcCanvasConfig = config;
+                        console.log('📐 PC端基准配置加载成功:', config);
+                    } catch (error) {
+                        console.error('❌ 加载PC端配置失败，使用默认值:', error);
+                        // 使用硬编码的默认值作为后备
+                        this.pcCanvasConfig = {
+                            canvas_width: 1050,
+                            canvas_height: 960,
+                            time_axis_width: 80,
+                            header_height: 60,
+                            available_width: 970,
+                            available_height: 900
+                        };
+                    }
+                },
+
+                // 🎯 新建辅助函数：动态获取当前画布宽度（不依赖缓存）
+                getCurrentCanvasWidth() {
+                    const canvasElement = document.getElementById('week-canvas-v3');
+                    if (!canvasElement) {
+                        console.warn('⚠️ 画布元素未找到，使用后备值');
+                        return this.isMobileDevice ? (window.innerWidth - 40) : 1050;
+                    }
+
+                    const width = canvasElement.offsetWidth;
+                    console.log('📐 当前画布宽度:', width);
+                    return width;
+                },
+
+                // 检测设备类型（同步执行，避免初始化顺序问题）
+                detectDevice() {
+                    const screenWidth = window.innerWidth;
+                    this.isMobileDevice = screenWidth < 768; // 小于768px视为移动设备
+
+                    // 🎯 修复：改为同步获取画布尺寸，避免卡片加载时设备检测未完成
+                    const canvasElement = document.getElementById('week-canvas-v3');
+                    if (canvasElement) {
+                        this.currentDeviceConfig.canvasWidth = canvasElement.offsetWidth;
+                        this.currentDeviceConfig.canvasHeight = canvasElement.offsetHeight;
+
+                        // 🎯 调试：详细记录画布信息
+                        console.log('📱 设备检测 - 画布元素信息:', {
+                            tagName: canvasElement.tagName,
+                            className: canvasElement.className,
+                            offsetWidth: canvasElement.offsetWidth,
+                            clientWidth: canvasElement.clientWidth,
+                            scrollWidth: canvasElement.scrollWidth,
+                            getBoundingClientRect: canvasElement.getBoundingClientRect().width,
+                            computedStyle: window.getComputedStyle(canvasElement).width
+                        });
+                    } else {
+                        // 后备值：如果画布尚未渲染，使用估算值
+                        this.currentDeviceConfig.canvasWidth = screenWidth - 40; // 减去边距
+                        this.currentDeviceConfig.canvasHeight = 960;
+                    }
+
+                    console.log('📱 设备检测:', {
+                        isMobile: this.isMobileDevice,
+                        screenWidth: screenWidth,
+                        canvasConfig: this.currentDeviceConfig,
+                        canvasElement: canvasElement ? '已找到' : '未找到（使用后备值）'
+                    });
+
+                    // 🎯 额外调试：显示缩放比例
+                    if (this.pcCanvasConfig && this.isMobileDevice) {
+                        const scaleX = (this.currentDeviceConfig.canvasWidth - this.currentDeviceConfig.timeAxisWidth) / this.pcCanvasConfig.available_width;
+                        console.log('📐 计算的缩放比例:', {
+                            PC可用宽度: this.pcCanvasConfig.available_width,
+                            移动端可用宽度: this.currentDeviceConfig.canvasWidth - this.currentDeviceConfig.timeAxisWidth,
+                            缩放比例: scaleX,
+                            说明: `移动端宽度是PC端的 ${(scaleX * 100).toFixed(1)}%`
+                        });
+                    }
+                },
+
+                // 🎯 将PC端坐标转换为当前设备坐标（用于渲染）
+                convertPCToDeviceCoords(pcX, pcY) {
+                    if (!this.pcCanvasConfig || !this.isMobileDevice) {
+                        // 如果是PC端或配置未加载，直接返回原坐标
+                        return { x: pcX, y: pcY };
+                    }
+
+                    // 🎯 使用辅助函数动态获取，不依赖缓存
+                    const deviceCanvasWidth = this.getCurrentCanvasWidth();
+                    const timeAxisWidth = 80; // 时间轴宽度固定
+
+                    // 计算缩放比例
+                    const pcAvailableWidth = this.pcCanvasConfig.available_width;
+                    const deviceAvailableWidth = deviceCanvasWidth - timeAxisWidth;
+
+                    const scaleX = deviceAvailableWidth / pcAvailableWidth;
+
+                    // X坐标转换：相对于时间轴的位置等比例缩放
+                    const pcRelativeX = pcX - this.pcCanvasConfig.time_axis_width;
+                    const deviceRelativeX = pcRelativeX * scaleX;
+                    const deviceX = timeAxisWidth + deviceRelativeX;
+
+                    // Y坐标转换：通常不需要缩放（时间轴高度一致）
+                    const deviceY = pcY;
+
+                    // 只记录第一张卡片的转换信息（避免日志过多）
+                    if (!this._firstCardLogged) {
+                        console.log('📐 坐标转换示例 (PC→设备):', {
+                            pcCoords: { x: pcX, y: pcY },
+                            deviceCoords: { x: deviceX, y: deviceY },
+                            deviceCanvasWidth: deviceCanvasWidth,
+                            deviceAvailableWidth: deviceAvailableWidth,
+                            scaleX: scaleX
+                        });
+                        this._firstCardLogged = true;
+                    }
+
+                    return { x: deviceX, y: deviceY };
+                },
+
+                // 🎯 将当前设备坐标转换为PC端坐标（用于保存）
+                convertDeviceToPCCoords(deviceX, deviceY) {
+                    if (!this.pcCanvasConfig || !this.isMobileDevice) {
+                        // 如果是PC端或配置未加载，直接返回原坐标
+                        return { x: deviceX, y: deviceY };
+                    }
+
+                    // 🎯 使用辅助函数动态获取，不依赖缓存
+                    const deviceCanvasWidth = this.getCurrentCanvasWidth();
+                    const timeAxisWidth = 80;
+
+                    // 计算缩放比例
+                    const pcAvailableWidth = this.pcCanvasConfig.available_width;
+                    const deviceAvailableWidth = deviceCanvasWidth - timeAxisWidth;
+
+                    const scaleX = deviceAvailableWidth / pcAvailableWidth;
+
+                    // X坐标转换：将设备相对位置转换回PC相对位置
+                    const deviceRelativeX = deviceX - timeAxisWidth;
+                    const pcRelativeX = deviceRelativeX / scaleX;
+                    const pcX = this.pcCanvasConfig.time_axis_width + pcRelativeX;
+
+                    // Y坐标通常不需要转换
+                    const pcY = deviceY;
+
+                    console.log('📐 坐标转换 (设备→PC):', {
+                        deviceCoords: { x: deviceX, y: deviceY },
+                        pcCoords: { x: pcX, y: pcY },
+                        deviceCanvasWidth: deviceCanvasWidth,
+                        scaleX: scaleX
+                    });
+
+                    return { x: pcX, y: pcY };
                 },
 
                 // ==================== 批量保存系统 (Phase 1 + Phase 2) ====================
@@ -3260,19 +3440,22 @@
                         console.log('Entering week view...');
                         console.log('Current week dates:', this.weekDates);
                         console.log('Time slots:', this.timeSlots);
-                        
+
                         await this.loadWeekSchedule();
-                        
+
                         // 强制重新渲染网格和时间条
                         this.$nextTick(() => {
+                            // 🎯 重新检测设备尺寸（画布已渲染，可以获取真实尺寸）
+                            this.detectDevice();
+
                             // 手动触发重新渲染
                             this.rerenderWeekView();
-                            
+
                             console.log('Week view DOM updated, checking elements...');
                             console.log('Activity pool element:', document.getElementById('activity-pool'));
                             console.log('Week grid element:', document.getElementById('week-grid'));
                             console.log('Time slot elements:', document.querySelectorAll('.time-slot').length);
-                            
+
                             setTimeout(() => {
                                 // 拖拽功能已移除
                                 console.log('点击选择模式已就绪');
@@ -4795,11 +4978,14 @@
                     const baseHeight = 60; // 基础高度60px
                     const cardHeight = duration <= 60 ? baseHeight : baseHeight + (duration - 60);
 
+                    // 🎯 响应式坐标转换：PC端坐标 → 当前设备坐标
+                    const deviceCoords = this.convertPCToDeviceCoords(card.x, card.y);
+
                     return `
                         <div class="${cardClass}"
                              data-card-id="${card.id}"
                              data-event-id="${card.id}"
-                             style="left: ${card.x}px; top: ${card.y}px; height: ${cardHeight}px;"
+                             style="left: ${deviceCoords.x}px; top: ${deviceCoords.y}px; height: ${cardHeight}px;"
                              onclick="window.laeAppInstance.selectCard(${card.id}); event.stopPropagation();"
                              ondblclick="window.laeAppInstance.editCard(${card.id}); event.stopPropagation();">
                             <div>${card.name}</div>
@@ -5004,18 +5190,24 @@
                         try {
                             console.log('🔍 [DEBUG] 开始更新卡片位置');
 
+                            // 🎯 响应式坐标转换：当前设备坐标 → PC端坐标（用于保存）
+                            const pcCoords = this.convertDeviceToPCCoords(x, y);
+
                             // 更新卡片位置 - 确保为整数
                             const oldPosition = { x: card.x, y: card.y };
-                            card.x = Math.max(0, Math.round(x));
-                            card.y = Math.max(0, Math.round(y));
+                            card.x = Math.max(0, Math.round(pcCoords.x));
+                            card.y = Math.max(0, Math.round(pcCoords.y));
 
                             console.log('🔍 [DEBUG] 位置变化:', {
+                                输入设备坐标: { x, y },
+                                转换后PC坐标: { x: pcCoords.x, y: pcCoords.y },
                                 旧位置: oldPosition,
                                 新位置: { x: card.x, y: card.y }
                             });
 
-                            // 重新计算时间相关属性
-                            const timeData = this.calculateTimeFromPosition(card.x, card.y);
+                            // 🎯 重新计算时间相关属性：使用原始设备坐标（而非转换后的PC坐标）
+                            // 因为 calculateTimeFromPosition 使用当前设备的画布尺寸进行计算
+                            const timeData = this.calculateTimeFromPosition(x, y);
                             console.log('🔍 [DEBUG] 计算的时间数据:', timeData);
 
                             card.event_date = timeData.isoDate;  // 使用ISO格式日期用于数据库
@@ -5071,12 +5263,13 @@
 
                     const originalCard = this.freeCanvasCards.find(c => c.id === this.selectedCardId);
                     if (originalCard) {
-                        // 计算新位置
-                        const newX = Math.max(0, Math.round(x));
-                        const newY = Math.max(0, Math.round(y));
+                        // 🎯 响应式坐标转换：设备坐标 → PC坐标（用于保存）
+                        const pcCoords = this.convertDeviceToPCCoords(x, y);
+                        const newX = Math.max(0, Math.round(pcCoords.x));
+                        const newY = Math.max(0, Math.round(pcCoords.y));
 
-                        // 重新计算时间相关属性
-                        const timeData = this.calculateTimeFromPosition(newX, newY);
+                        // 🎯 重新计算时间相关属性：使用原始设备坐标
+                        const timeData = this.calculateTimeFromPosition(x, y);
 
                         // 为V3自由画布生成唯一的canvas_position_y
                         const uniqueCanvasY = Date.now() % 10000; // 使用时间戳生成唯一值
@@ -5097,8 +5290,8 @@
                             start_time: this.formatTimeForAPI(timeData.startTime),
                             is_precise: originalCard.is_precise || false,
                             canvas_position_y: uniqueCanvasY,  // 使用唯一值避免冲突
-                            x: newX,
-                            y: newY
+                            x: newX,  // 保存PC坐标
+                            y: newY   // 保存PC坐标
                         };
 
                         console.log('📋 复制卡片到位置:', {
@@ -5186,8 +5379,31 @@
                         全部字段: card
                     });
 
-                    // 根据卡片位置计算时间属性
-                    const timeData = this.calculateTimeFromPosition(card.x, card.y);
+                    // 🎯 调试：检查卡片存储的坐标
+                    console.log('🔍 卡片原始坐标:', {
+                        x: card.x,
+                        y: card.y,
+                        isMobile: this.isMobileDevice,
+                        pcCanvasWidth: this.pcCanvasConfig?.canvas_width,
+                        deviceCanvasWidth: this.currentDeviceConfig.canvasWidth,
+                        坐标是否异常: card.x > (this.pcCanvasConfig?.canvas_width || 1050)
+                    });
+
+                    // 🎯 根据卡片位置计算时间属性：需要先将PC坐标转换为设备坐标
+                    const deviceCoords = this.convertPCToDeviceCoords(card.x, card.y);
+
+                    // 验证转换结果
+                    const canvasElement = document.getElementById('week-canvas-v3');
+                    const actualCanvasWidth = canvasElement ? canvasElement.offsetWidth : 0;
+                    console.log('🔍 转换后的设备坐标:', {
+                        输入PC坐标: { x: card.x, y: card.y },
+                        输出设备坐标: deviceCoords,
+                        实际画布宽度: actualCanvasWidth,
+                        缓存画布宽度: this.currentDeviceConfig.canvasWidth,
+                        转换是否正确: deviceCoords.x < actualCanvasWidth
+                    });
+
+                    const timeData = this.calculateTimeFromPosition(deviceCoords.x, deviceCoords.y);
 
                     console.log('📝 卡片位置和时间数据:', {
                         cardId: card.id,
@@ -5229,6 +5445,19 @@
                     const timeAxisWidth = 80;
                     const availableWidth = canvasWidth - timeAxisWidth;
                     const columnWidth = availableWidth / 7;
+
+                    // 🎯 调试：详细记录画布信息
+                    if (canvasElement) {
+                        console.log('🧮 位置计算 - 画布元素信息:', {
+                            tagName: canvasElement.tagName,
+                            className: canvasElement.className,
+                            offsetWidth: canvasElement.offsetWidth,
+                            clientWidth: canvasElement.clientWidth,
+                            scrollWidth: canvasElement.scrollWidth,
+                            getBoundingClientRect: canvasElement.getBoundingClientRect().width,
+                            computedStyle: window.getComputedStyle(canvasElement).width
+                        });
+                    }
 
                     console.log('🧮 位置计算参数:', {
                         x, y, canvasWidth, timeAxisWidth, availableWidth, columnWidth
@@ -5337,6 +5566,20 @@
 
                             // 处理每个事件
                             for (const event of events) {
+                                // 🎯 容错：修正超出PC画布的异常坐标
+                                let x = event.x;
+                                let y = event.y;
+
+                                if (this.pcCanvasConfig && x > this.pcCanvasConfig.canvas_width) {
+                                    console.warn('⚠️ 检测到异常PC坐标，自动修正:', { id: event.id, 原始x: x });
+                                    // 根据 event_date 重新计算正确坐标
+                                    const dayIndex = this.weekDates.indexOf(event.event_date || day);
+                                    if (dayIndex >= 0) {
+                                        x = this.pcCanvasConfig.time_axis_width + dayIndex * (this.pcCanvasConfig.available_width / 7);
+                                        console.log('✅ 修正后的坐标:', x);
+                                    }
+                                }
+
                                 // 转换为自由画布卡片格式
                                 const canvasCard = {
                                     id: event.id,
@@ -5354,9 +5597,9 @@
                                     start_time: event.start_time,
                                     is_precise: event.is_precise || false,
                                     canvas_position_y: event.canvas_position_y || 0,
-                                    // 位置字段 - 支持并排摆放
-                                    x: event.x || this.calculateXFromDate(day),
-                                    y: event.y || this.calculateYFromTimeWithOffset(event.start_time || '8:00', event.canvas_position_y || 0)
+                                    // 位置字段 - 使用修正后的坐标
+                                    x: x || this.calculateXFromDate(day),
+                                    y: y || this.calculateYFromTimeWithOffset(event.start_time || '8:00', event.canvas_position_y || 0)
                                 };
                                 this.freeCanvasCards.push(canvasCard);
                                 loadedCount++;

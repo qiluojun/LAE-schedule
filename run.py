@@ -8,5 +8,5 @@ if __name__ == "__main__":
     port = 8008
     if len(sys.argv) > 1 and sys.argv[1] == "--port" and len(sys.argv) > 2:
         port = int(sys.argv[2])
-    uvicorn.run(app, host="127.0.0.1", port=port, reload=False)
-    # uvicorn.run(app, host="0.0.0.0", port=port, reload=False)
+    # uvicorn.run(app, host="127.0.0.1", port=port, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)

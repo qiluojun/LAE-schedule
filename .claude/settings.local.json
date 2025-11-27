@@ -12,7 +12,9 @@
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git restore:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
