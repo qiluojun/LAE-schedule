@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=0.6, maximum-scale=5.0, user-scalable=yes">
     <title>LAE - 个人日程与主支线管理系统 v16 Summary Stats</title>
     
     <!-- Bootstrap CSS -->
@@ -350,6 +350,8 @@
             max-height: 70vh;
             /* 🎯 大屏幕自适应容器宽度，小屏幕显示滚动条 */
             width: 100%;
+            /* 🎯 允许双指缩放：pinch-zoom 优先于滚动 */
+            touch-action: manipulation;
         }
 
         /* 自由卡片工作区 - 覆盖在网格系统之上 */
