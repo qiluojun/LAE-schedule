@@ -345,9 +345,11 @@
             border: 2px solid #dee2e6;
             border-radius: 0.5rem;
             margin: 1rem 0;
-            overflow: auto;
+            overflow: auto; /* 支持横向和纵向滚动 */
             min-height: 400px;
             max-height: 70vh;
+            /* 🎯 大屏幕自适应容器宽度，小屏幕显示滚动条 */
+            width: 100%;
         }
 
         /* 自由卡片工作区 - 覆盖在网格系统之上 */
@@ -372,7 +374,9 @@
         .canvas-grid-container {
             display: flex;
             position: relative;
+            /* 🎯 自适应宽度：大屏幕撑满，小屏幕最小1050px允许滚动 */
             width: 100%;
+            min-width: 1050px; /* 小屏幕最小宽度 */
             height: 100%;
         }
 
@@ -1921,9 +1925,18 @@
         // 直接嵌入JavaScript代码以避免路径问题
         function laeApp() {
             return {
+                // 🎯 逻辑坐标系常量 - Single Source of Truth
+                // 所有计算逻辑基于此标准尺寸，与设备屏幕尺寸无关
+                LOGICAL_CANVAS: {
+                    width: 1050,              // 逻辑画布总宽度（对应数据库 x 坐标最大值）
+                    timeAxisWidth: 80,        // 时间轴固定宽度
+                    availableWidth: 970,      // 可用于7天列的宽度 (1050 - 80)
+                    colWidth: 138.57142857142858  // 每列逻辑宽度 (970 / 7)
+                },
+
                 // 当前视图状态
                 currentView: 'week',
-                
+
                 // 日期状态
                 currentDate: new Date(),
                 currentWeekStart: null,
@@ -3469,11 +3482,101 @@
                 },
                 
                 // 周视图相关方法
+                // 🎯 标准化的日期计算函数 - 修复周日(day=0)导致的9天偏移Bug
+                getWeekStart(date) {
+                    const d = new Date(date);
+                    const day = d.getDay(); // 0(周日) ~ 6(周六)
+                    // 关键修复：周日(day=0)应视为7，回退6天到周一
+                    // 其他日期(day=1~6)回退(day-1)天到周一
+                    const dayShift = day === 0 ? 6 : day - 1;
+                    d.setDate(d.getDate() - dayShift);
+                    return d;
+                },
+
+                // 🎯 坐标映射转换函数：屏幕物理坐标 → 逻辑坐标
+                // 用于事件处理（点击、触摸等），将设备特定的屏幕坐标转换为统一的逻辑坐标
+                getLogicalCoords(event) {
+                    // 🎯 关键：应该基于 canvas-grid-container 计算，因为卡片相对于它定位
+                    const gridContainer = document.querySelector('.canvas-grid-container');
+                    const canvasElement = document.getElementById('week-canvas-v3');
+
+                    if (!gridContainer || !canvasElement) {
+                        console.warn('⚠️ Canvas containers not found in getLogicalCoords');
+                        return { x: 0, y: 0 };
+                    }
+
+                    // 获取grid容器的边界矩形
+                    const rect = gridContainer.getBoundingClientRect();
+
+                    // 🎯 滚动发生在外层的 week-canvas-v3 容器上
+                    const scrollTop = canvasElement.scrollTop || 0;
+                    const scrollLeft = canvasElement.scrollLeft || 0;
+
+                    const relX = event.clientX - rect.left + scrollLeft;
+                    const relY = event.clientY - rect.top + scrollTop;
+
+                    // 🎯 计算实际grid宽度与逻辑宽度的缩放比例
+                    const actualGridWidth = gridContainer.offsetWidth;
+                    const scaleX = actualGridWidth / this.LOGICAL_CANVAS.width;
+                    const scaleY = 1; // Y轴通常不缩放
+
+                    // 转换为逻辑坐标
+                    const logicalX = relX / scaleX;
+                    const logicalY = relY / scaleY;
+
+                    console.log('🧭 坐标转换:', {
+                        screenCoords: { x: event.clientX, y: event.clientY },
+                        relativeCoords: { x: relX, y: relY },
+                        actualGridWidth,
+                        logicalWidth: this.LOGICAL_CANVAS.width,
+                        scaleX,
+                        logicalCoords: { x: logicalX, y: logicalY }
+                    });
+
+                    return { x: logicalX, y: logicalY };
+                },
+
+                // 🎯 逆向转换：逻辑坐标 → 屏幕显示坐标
+                // 用于渲染卡片，将数据库中的逻辑坐标转换为当前设备的显示坐标
+                logicalToDisplayCoords(logicalX, logicalY) {
+                    // 🎯 关键修复：应该获取 canvas-grid-container 的实际宽度
+                    // 因为卡片是相对于 grid container 定位的，而不是外层的 week-canvas-v3
+                    const gridContainer = document.querySelector('.canvas-grid-container');
+                    if (!gridContainer) {
+                        console.warn('⚠️ Grid container not found in logicalToDisplayCoords');
+                        return { x: logicalX, y: logicalY };
+                    }
+
+                    // 获取实际的grid宽度（小屏幕上是1050px，大屏幕上可能更宽）
+                    const actualGridWidth = gridContainer.offsetWidth;
+                    const scaleX = actualGridWidth / this.LOGICAL_CANVAS.width;
+                    const scaleY = 1;
+
+                    const displayX = logicalX * scaleX;
+                    const displayY = logicalY * scaleY;
+
+                    // 🔍 调试日志：帮助诊断移动端位置问题
+                    if (Math.random() < 0.1) { // 只记录10%的调用，避免日志过多
+                        console.log('🎨 逻辑坐标 → 显示坐标:', {
+                            input: { logicalX, logicalY },
+                            actualGridWidth,
+                            logicalWidth: this.LOGICAL_CANVAS.width,
+                            scaleX,
+                            output: { displayX, displayY }
+                        });
+                    }
+
+                    return {
+                        x: displayX,
+                        y: displayY
+                    };
+                },
+
                 updateWeekDates() {
-                    const start = new Date(this.currentDate);
-                    start.setDate(start.getDate() - start.getDay() + 1); // 获取周一
+                    // 使用标准化的 getWeekStart 函数，确保周日(day=0)被正确处理
+                    const start = this.getWeekStart(this.currentDate);
                     this.currentWeekStart = new Date(start);
-                    
+
                     this.weekDates = [];
                     for (let i = 0; i < 7; i++) {
                         const date = new Date(start);
@@ -4973,19 +5076,19 @@
                     // 🎯 动态高度计算：根据duration计算卡片高度
                     // 规则：
                     // - 60分钟及以下：固定60px（保证文本可读性）
-                    // - 60分钟以上：60px基础 + 每多10分钟增加10px
+                    // - 60分钟以上：60px基础 + 每多1分钟增加1px
                     const duration = card.duration || 60; // 默认60分钟
                     const baseHeight = 60; // 基础高度60px
                     const cardHeight = duration <= 60 ? baseHeight : baseHeight + (duration - 60);
 
-                    // 🎯 响应式坐标转换：PC端坐标 → 当前设备坐标
-                    const deviceCoords = this.convertPCToDeviceCoords(card.x, card.y);
+                    // 🎯 使用新的逻辑坐标转换：数据库逻辑坐标 → 设备显示坐标
+                    const displayCoords = this.logicalToDisplayCoords(card.x, card.y);
 
                     return `
                         <div class="${cardClass}"
                              data-card-id="${card.id}"
                              data-event-id="${card.id}"
-                             style="left: ${deviceCoords.x}px; top: ${deviceCoords.y}px; height: ${cardHeight}px;"
+                             style="left: ${displayCoords.x}px; top: ${displayCoords.y}px; height: ${cardHeight}px;"
                              onclick="window.laeAppInstance.selectCard(${card.id}); event.stopPropagation();"
                              ondblclick="window.laeAppInstance.editCard(${card.id}); event.stopPropagation();">
                             <div>${card.name}</div>
@@ -5004,38 +5107,34 @@
                         return;
                     }
 
-                    // 获取双击位置
-                    const canvasRect = document.getElementById('week-canvas-v3').getBoundingClientRect();
-                    const canvasContainer = document.querySelector('.canvas-grid-container');
+                    // 🎯 使用新的坐标转换函数：屏幕坐标 → 逻辑坐标
+                    const logicalCoords = this.getLogicalCoords(event);
 
-                    // 加入滚动偏移量
-                    const scrollTop = canvasContainer ? canvasContainer.scrollTop : 0;
-                    const relativeY = event.clientY - canvasRect.top - 60 + scrollTop;
-                    const relativeX = event.clientX - canvasRect.left;
+                    // 调整Y坐标：减去header偏移
+                    const adjustedY = logicalCoords.y - 60;
 
-                    // 动态计算画布尺寸
-                    const canvasElement = document.getElementById('week-canvas-v3');
-                    const canvasWidth = canvasElement ? canvasElement.offsetWidth : 1050;
-                    const timeAxisWidth = 80;
-                    const availableWidth = canvasWidth - timeAxisWidth;
-                    const columnWidth = availableWidth / 7;
+                    // 🎯 吸附到逻辑网格（基于逻辑坐标系）
+                    const { timeAxisWidth, colWidth } = this.LOGICAL_CANVAS;
+                    const gridUnit = 10 * this.v3ZoomLevel;
 
-                    // 计算卡片位置（吸附到网格）
-                    const snapY = 60 + Math.round(relativeY / (10 * this.v3ZoomLevel)) * (10 * this.v3ZoomLevel);
-                    const snapX = timeAxisWidth + Math.round((relativeX - timeAxisWidth) / columnWidth) * columnWidth;
+                    // Y坐标吸附到10分钟网格
+                    const snapY = 60 + Math.round(adjustedY / gridUnit) * gridUnit;
+
+                    // X坐标吸附到列边界
+                    const relativeX = Math.max(0, logicalCoords.x - timeAxisWidth);
+                    const colIndex = Math.floor(relativeX / colWidth);
+                    const snapX = timeAxisWidth + colIndex * colWidth;
 
                     // 使用统一的时间计算函数（支持待定任务区）
                     const timeData = this.calculateTimeFromPosition(snapX, snapY);
 
-                    console.log('🎯 Double click debug:', {
-                        relativeX,
-                        relativeY,
+                    console.log('🎯 Double click debug (逻辑坐标):', {
+                        screenCoords: { x: event.clientX, y: event.clientY },
+                        logicalCoords,
+                        adjustedY,
                         snapX,
                         snapY,
-                        canvasWidth,
-                        timeAxisWidth,
-                        availableWidth,
-                        columnWidth,
+                        colIndex,
                         calculatedTime: timeData
                     });
 
@@ -5104,18 +5203,15 @@
                     }
                 },
 
-                // 获取画布位置（考虑滚动偏差）
+                // 🎯 获取逻辑画布位置（返回逻辑坐标）
+                getLogicalCanvasPosition(event) {
+                    // 直接使用 getLogicalCoords 转换函数
+                    return this.getLogicalCoords(event);
+                },
+
+                // 兼容旧代码：保留 getCanvasPosition 但使用新的逻辑坐标转换
                 getCanvasPosition(event) {
-                    const canvas = document.getElementById('week-canvas-v3');
-                    const rect = canvas.getBoundingClientRect();
-
-                    // 考虑画布的滚动偏移量
-                    const x = event.clientX - rect.left + canvas.scrollLeft;
-                    const y = event.clientY - rect.top + canvas.scrollTop;
-
-                    console.log('📍 Position calculation:', { x, y });
-
-                    return { x, y };
+                    return this.getLogicalCanvasPosition(event);
                 },
 
                 // 注意：不再使用createFreeCard方法，改为通过数据库创建事件
@@ -5169,9 +5265,9 @@
                 },
 
                 // 移动选中的卡片到指定位置
-                async moveSelectedCardTo(x, y) {
+                async moveSelectedCardTo(logicalX, logicalY) {
                     console.log('🔍 [DEBUG] moveSelectedCardTo 开始执行');
-                    console.log('🔍 [DEBUG] 目标位置:', { x, y });
+                    console.log('🔍 [DEBUG] 目标位置(逻辑坐标):', { logicalX, logicalY });
                     console.log('🔍 [DEBUG] 选中卡片ID:', this.selectedCardId);
                     console.log('🔍 [DEBUG] 当前 freeCanvasCards 数组长度:', this.freeCanvasCards.length);
 
@@ -5190,24 +5286,19 @@
                         try {
                             console.log('🔍 [DEBUG] 开始更新卡片位置');
 
-                            // 🎯 响应式坐标转换：当前设备坐标 → PC端坐标（用于保存）
-                            const pcCoords = this.convertDeviceToPCCoords(x, y);
-
-                            // 更新卡片位置 - 确保为整数
+                            // 🎯 直接使用逻辑坐标保存到数据库（无需转换）
                             const oldPosition = { x: card.x, y: card.y };
-                            card.x = Math.max(0, Math.round(pcCoords.x));
-                            card.y = Math.max(0, Math.round(pcCoords.y));
+                            card.x = Math.max(0, Math.round(logicalX));
+                            card.y = Math.max(0, Math.round(logicalY));
 
                             console.log('🔍 [DEBUG] 位置变化:', {
-                                输入设备坐标: { x, y },
-                                转换后PC坐标: { x: pcCoords.x, y: pcCoords.y },
+                                输入逻辑坐标: { x: logicalX, y: logicalY },
                                 旧位置: oldPosition,
                                 新位置: { x: card.x, y: card.y }
                             });
 
-                            // 🎯 重新计算时间相关属性：使用原始设备坐标（而非转换后的PC坐标）
-                            // 因为 calculateTimeFromPosition 使用当前设备的画布尺寸进行计算
-                            const timeData = this.calculateTimeFromPosition(x, y);
+                            // 🎯 使用逻辑坐标计算时间相关属性
+                            const timeData = this.calculateTimeFromPosition(logicalX, logicalY);
                             console.log('🔍 [DEBUG] 计算的时间数据:', timeData);
 
                             card.event_date = timeData.isoDate;  // 使用ISO格式日期用于数据库
@@ -5255,7 +5346,7 @@
                 },
 
                 // 复制选中的卡片到指定位置
-                async copySelectedCardTo(x, y) {
+                async copySelectedCardTo(logicalX, logicalY) {
                     if (!this.selectedCardId) {
                         console.log('❌ 没有选中的卡片');
                         return;
@@ -5263,13 +5354,12 @@
 
                     const originalCard = this.freeCanvasCards.find(c => c.id === this.selectedCardId);
                     if (originalCard) {
-                        // 🎯 响应式坐标转换：设备坐标 → PC坐标（用于保存）
-                        const pcCoords = this.convertDeviceToPCCoords(x, y);
-                        const newX = Math.max(0, Math.round(pcCoords.x));
-                        const newY = Math.max(0, Math.round(pcCoords.y));
+                        // 🎯 直接使用逻辑坐标（无需转换）
+                        const newX = Math.max(0, Math.round(logicalX));
+                        const newY = Math.max(0, Math.round(logicalY));
 
-                        // 🎯 重新计算时间相关属性：使用原始设备坐标
-                        const timeData = this.calculateTimeFromPosition(x, y);
+                        // 🎯 使用逻辑坐标重新计算时间相关属性
+                        const timeData = this.calculateTimeFromPosition(logicalX, logicalY);
 
                         // 为V3自由画布生成唯一的canvas_position_y
                         const uniqueCanvasY = Date.now() % 10000; // 使用时间戳生成唯一值
@@ -5389,21 +5479,14 @@
                         坐标是否异常: card.x > (this.pcCanvasConfig?.canvas_width || 1050)
                     });
 
-                    // 🎯 根据卡片位置计算时间属性：需要先将PC坐标转换为设备坐标
-                    const deviceCoords = this.convertPCToDeviceCoords(card.x, card.y);
-
-                    // 验证转换结果
-                    const canvasElement = document.getElementById('week-canvas-v3');
-                    const actualCanvasWidth = canvasElement ? canvasElement.offsetWidth : 0;
-                    console.log('🔍 转换后的设备坐标:', {
-                        输入PC坐标: { x: card.x, y: card.y },
-                        输出设备坐标: deviceCoords,
-                        实际画布宽度: actualCanvasWidth,
-                        缓存画布宽度: this.currentDeviceConfig.canvasWidth,
-                        转换是否正确: deviceCoords.x < actualCanvasWidth
+                    // 🎯 直接使用逻辑坐标计算时间属性（数据库中存储的就是逻辑坐标）
+                    console.log('🔍 卡片逻辑坐标:', {
+                        cardId: card.id,
+                        x: card.x,
+                        y: card.y
                     });
 
-                    const timeData = this.calculateTimeFromPosition(deviceCoords.x, deviceCoords.y);
+                    const timeData = this.calculateTimeFromPosition(card.x, card.y);
 
                     console.log('📝 卡片位置和时间数据:', {
                         cardId: card.id,
@@ -5438,57 +5521,47 @@
                 },
 
                 // 根据卡片位置计算时间属性
-                calculateTimeFromPosition(x, y) {
-                    // 使用与双击创建相同的动态列宽计算
-                    const canvasElement = document.getElementById('week-canvas-v3');
-                    const canvasWidth = canvasElement ? canvasElement.offsetWidth : 1050;
-                    const timeAxisWidth = 80;
-                    const availableWidth = canvasWidth - timeAxisWidth;
-                    const columnWidth = availableWidth / 7;
+                calculateTimeFromPosition(logicalX, logicalY) {
+                    // 🎯 完全基于逻辑坐标系的计算 - 不再依赖DOM元素的动态宽度
+                    const { timeAxisWidth, colWidth } = this.LOGICAL_CANVAS;
 
-                    // 🎯 调试：详细记录画布信息
-                    if (canvasElement) {
-                        console.log('🧮 位置计算 - 画布元素信息:', {
-                            tagName: canvasElement.tagName,
-                            className: canvasElement.className,
-                            offsetWidth: canvasElement.offsetWidth,
-                            clientWidth: canvasElement.clientWidth,
-                            scrollWidth: canvasElement.scrollWidth,
-                            getBoundingClientRect: canvasElement.getBoundingClientRect().width,
-                            computedStyle: window.getComputedStyle(canvasElement).width
-                        });
-                    }
-
-                    console.log('🧮 位置计算参数:', {
-                        x, y, canvasWidth, timeAxisWidth, availableWidth, columnWidth
+                    console.log('🧮 位置计算参数 (逻辑坐标):', {
+                        logicalX,
+                        logicalY,
+                        timeAxisWidth,
+                        colWidth
                     });
 
-                    // 计算日期偏移（基于X坐标，减去时间轴宽度）
-                    const adjustedX = Math.max(0, x - timeAxisWidth);
-                    const dayOffset = Math.floor(adjustedX / columnWidth);
-                    const targetDate = new Date(this.currentDate);
-                    const weekStart = new Date(this.currentDate);
-                    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // 周一为起始
-                    targetDate.setTime(weekStart.getTime());
-                    targetDate.setDate(weekStart.getDate() + dayOffset);
+                    // 计算日期偏移（基于逻辑X坐标，减去时间轴宽度）
+                    const adjustedX = Math.max(0, logicalX - timeAxisWidth);
+                    const dayOffset = Math.floor(adjustedX / colWidth);
 
-                    // 计算时间（基于Y坐标）
+                    // 限制 dayOffset 在 0-6 范围内
+                    const validDayOffset = Math.max(0, Math.min(6, dayOffset));
+
+                    // 使用标准化的 getWeekStart 函数计算周一日期
+                    const weekStart = this.getWeekStart(this.currentDate);
+                    const targetDate = new Date(weekStart);
+                    targetDate.setDate(weekStart.getDate() + validDayOffset);
+
+                    // 计算时间（基于逻辑Y坐标）
                     const headerOffset = 60; // 顶部偏移
                     const timeStartHour = 7; // 7:00开始
                     const timeEndHour = 23; // 23:00结束
-                    const gridUnit = 10 * this.v3ZoomLevel; // 网格单位
+                    const gridUnitMinutes = 10; // 每个网格单位代表10分钟
+                    const gridUnitHeight = 10 * this.v3ZoomLevel; // 网格单位的像素高度
 
                     // 计算23:00网格线的Y坐标（时间网格的下边界）
                     const gridEndY = headerOffset + (timeEndHour - timeStartHour) * 60 * this.v3ZoomLevel;
 
                     console.log('🔍 时间网格边界检测:', {
-                        y: y,
-                        gridEndY: gridEndY,
-                        isPendingArea: y > gridEndY
+                        logicalY,
+                        gridEndY,
+                        isPendingArea: logicalY > gridEndY
                     });
 
                     // 如果Y坐标超出23:00网格线，进入待定任务区（无时间网格区域）
-                    if (y > gridEndY) {
+                    if (logicalY > gridEndY) {
                         const isoDate = targetDate.toISOString().split('T')[0];
                         const result = {
                             date: this.formatDate(isoDate),
@@ -5499,7 +5572,7 @@
                         return result;
                     }
 
-                    if (y < headerOffset) {
+                    if (logicalY < headerOffset) {
                         const isoDate = targetDate.toISOString().split('T')[0];
                         const result = {
                             date: this.formatDate(isoDate),
@@ -5510,14 +5583,11 @@
                         return result;
                     }
 
-                    // 计算从7:00开始的分钟数
-                    const minutesFromStart = Math.floor((y - headerOffset) / gridUnit) * 10;
-
-                    // 添加10分钟偏移以修正画布位置和编辑窗口时间的偏差
-                    const correctedMinutes = minutesFromStart + 10;
+                    // 计算从7:00开始的分钟数（移除旧的+10分钟偏移补偿）
+                    const minutesFromStart = Math.floor((logicalY - headerOffset) / gridUnitHeight) * gridUnitMinutes;
 
                     // 转换为具体时间
-                    const totalMinutes = timeStartHour * 60 + correctedMinutes;
+                    const totalMinutes = timeStartHour * 60 + minutesFromStart;
                     const hour = Math.floor(totalMinutes / 60);
                     const minute = totalMinutes % 60;
 
@@ -5622,16 +5692,11 @@
                 // 根据日期计算X坐标（使用动态列宽）
                 calculateXFromDate(dateStr) {
                     const dayIndex = this.weekDates.indexOf(dateStr);
-                    if (dayIndex < 0) return 80; // 默认时间轴位置
+                    if (dayIndex < 0) return this.LOGICAL_CANVAS.timeAxisWidth; // 默认时间轴位置
 
-                    // 使用动态列宽计算
-                    const canvasElement = document.getElementById('week-canvas-v3');
-                    const canvasWidth = canvasElement ? canvasElement.offsetWidth : 1050;
-                    const timeAxisWidth = 80;
-                    const availableWidth = canvasWidth - timeAxisWidth;
-                    const columnWidth = availableWidth / 7;
-
-                    return timeAxisWidth + dayIndex * columnWidth;
+                    // 🎯 使用逻辑坐标系常量计算
+                    const { timeAxisWidth, colWidth } = this.LOGICAL_CANVAS;
+                    return timeAxisWidth + dayIndex * colWidth;
                 },
 
                 // 根据时间计算Y坐标
