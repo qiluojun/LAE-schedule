@@ -1955,7 +1955,7 @@
                 refreshTrigger: 0,
 
                 // V3.0 动态画布模式
-                isV3Mode: false, // 是否启用V3模式
+                isV3Mode: true, // 是否启用V3模式（默认启用V3）
                 gridSnapSize: 10, // 网格吸附大小(分钟)
                 canvasScrollTop: 0, // 画布滚动位置
                 snapIndicatorY: 0, // 吸附指示器位置
@@ -2819,38 +2819,23 @@
 
                         console.log('🎯 Creating new event with data:', eventData);
 
-                        const response = await fetch('/api/events/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(eventData)
-                        });
+                        // 🎯 使用暂存机制替代直接API调用
+                        // 生成临时ID（使用负数以区分真实ID）
+                        const tempId = -Date.now();
+                        const eventDataWithId = {
+                            ...eventData,
+                            id: tempId,
+                            goal: '' // 新建事件的goal默认为空
+                        };
 
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            console.error('🚨 API Error Details:', errorData);
+                        // 记录到待创建列表
+                        this.recordChange('created', eventDataWithId);
+                        console.log('✅ Event创建已暂存，临时ID:', tempId);
 
-                            // 处理422验证错误的详细信息
-                            if (response.status === 422 && errorData.detail) {
-                                let errorMsg = '验证错误:\n';
-                                if (Array.isArray(errorData.detail)) {
-                                    errorData.detail.forEach(err => {
-                                        errorMsg += `- ${err.loc?.join('.') || 'unknown'}: ${err.msg}\n`;
-                                    });
-                                } else {
-                                    errorMsg += JSON.stringify(errorData.detail, null, 2);
-                                }
-                                throw new Error(errorMsg);
-                            }
-
-                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || JSON.stringify(errorData)}`);
-                        }
-
-                        const createdEvent = await response.json();
-                        console.log('✅ Event created successfully:', createdEvent);
-                        console.log('🔍 [DEBUG] API返回的x值:', createdEvent.x, typeof createdEvent.x);
-                        console.log('🔍 [DEBUG] API返回的y值:', createdEvent.y, typeof createdEvent.y);
+                        // 模拟API返回的数据
+                        const createdEvent = eventDataWithId;
+                        console.log('🔍 [DEBUG] 临时卡片x值:', createdEvent.x, typeof createdEvent.x);
+                        console.log('🔍 [DEBUG] 临时卡片y值:', createdEvent.y, typeof createdEvent.y);
 
                         // 关闭模态框并重置表单
                         this.showNewEventModal = false;
@@ -2903,8 +2888,8 @@
 
                             console.log('✅ V3卡片已添加到画布，保留选中状态批量创建');
                         } else {
-                            // V2模式：重新加载周数据
-                            await this.loadWeekSchedule();
+                            // V2模式：不再重新加载数据，使用暂存机制
+                            console.log('✅ V2模式：卡片创建已暂存，等待批量保存');
                         }
 
                         // v2.1 改进：保留选中状态以便快速批量创建
@@ -3863,40 +3848,16 @@
 
                         console.log('📝 Updating event with data:', eventData);
 
-                        const response = await fetch(`/api/events/${this.editingEvent.id}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(eventData)
-                        });
+                        // 🎯 使用暂存机制替代直接API调用
+                        // 将事件ID添加到数据中
+                        const eventDataWithId = {
+                            ...eventData,
+                            id: this.editingEvent.id
+                        };
 
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            console.error('🚨 API错误详细信息:', {
-                                status: response.status,
-                                statusText: response.statusText,
-                                errorData: errorData,
-                                发送的数据: eventData
-                            });
-
-                            // 处理422验证错误的详细信息
-                            if (response.status === 422 && errorData.detail) {
-                                let errorMsg = '验证错误:\n';
-                                if (Array.isArray(errorData.detail)) {
-                                    errorData.detail.forEach(err => {
-                                        errorMsg += `- ${err.loc?.join('.') || 'unknown'}: ${err.msg}\n`;
-                                    });
-                                } else {
-                                    errorMsg += JSON.stringify(errorData.detail, null, 2);
-                                }
-                                throw new Error(errorMsg);
-                            }
-
-                            throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.detail || JSON.stringify(errorData)}`);
-                        }
-
-                        console.log('✅ Event updated successfully');
+                        // 记录到待更新列表（不立即调用API）
+                        this.recordChange('updated', eventDataWithId);
+                        console.log('✅ Event变更已暂存，等待批量保存');
 
                         // V3模式：直接更新本地数组中的卡片，避免重新加载导致卡片丢失
                         if (this.isV3Mode) {
@@ -3967,17 +3928,8 @@
                             // 关闭模态框
                             this.forceCloseModal();
                         } else {
-                            // V2模式：重新加载数据
-                            await this.loadWeekSchedule();
-
-                            // 重新渲染网格
-                            const gridContainer = document.querySelector('[x-html="renderFullWeekGrid()"]');
-                            if (gridContainer) {
-                                gridContainer.innerHTML = this.renderFullWeekGrid();
-                                // 拖拽功能已移除
-                            }
-
-                            // 关闭模态框
+                            // V2模式：不再重新加载数据，使用暂存机制
+                            // 直接关闭模态框，等待用户点击保存按钮批量上传
                             this.forceCloseModal();
                         }
 
@@ -4000,16 +3952,10 @@
                         try {
                             console.log('🗑️ Deleting event:', this.editingEvent.id);
 
-                            const response = await fetch(`/api/events/${this.editingEvent.id}`, {
-                                method: 'DELETE'
-                            });
-
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-
-                            console.log('✅ Event deleted successfully');
-                            console.log('🔍 [DEBUG] API删除成功，开始更新本地数据');
+                            // 🎯 使用暂存机制替代直接API调用
+                            this.recordChange('deleted', { id: this.editingEvent.id });
+                            console.log('✅ Event删除已暂存，等待批量保存');
+                            console.log('🔍 [DEBUG] 删除已记录，开始更新本地数据');
 
                             // 从 freeCanvasCards 数组中移除被删除的卡片
                             const deletedEventId = this.editingEvent.id;
