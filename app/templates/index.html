@@ -10,6 +10,9 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
 
+    <!-- 🎯 IndexedDB本地缓存管理器 -->
+    <script src="/static/js/localDBManager.js"></script>
+
     <!-- 🎯 移动端调试工具 Eruda（仅在移动设备上加载）-->
     <script>
         if (window.innerWidth < 768) {
@@ -971,6 +974,38 @@
                     </button>
                 </div>
 
+                <!-- 🎯 IndexedDB同步按钮组 -->
+                <div class="d-flex align-items-center gap-2 me-3" x-show="useLocalCache">
+                    <!-- 同步到云端按钮 -->
+                    <button
+                        class="btn btn-sm"
+                        :class="syncStatus.hasChanges ? 'btn-info' : 'btn-outline-secondary'"
+                        @click="syncToCloud()"
+                        :disabled="syncStatus.isSyncing || !syncStatus.hasChanges"
+                        title="将本地更改同步到云端"
+                    >
+                        <span x-show="!syncStatus.isSyncing">☁️ 同步</span>
+                        <span x-show="syncStatus.isSyncing">⏳ 同步中...</span>
+                        <span x-show="syncStatus.hasChanges" class="badge bg-danger ms-1" x-text="syncStatus.changeCount"></span>
+                    </button>
+
+                    <!-- 从云端下载按钮 -->
+                    <button
+                        class="btn btn-sm btn-outline-primary"
+                        @click="downloadCloudData()"
+                        :disabled="syncStatus.isDownloading"
+                        title="重新从云端下载完整数据"
+                    >
+                        <span x-show="!syncStatus.isDownloading">📥 重新下载</span>
+                        <span x-show="syncStatus.isDownloading">⏳ 下载中...</span>
+                    </button>
+
+                    <!-- 同步状态指示 -->
+                    <small class="text-light" x-show="syncStatus.lastSync" title="最后同步时间">
+                        <span x-text="syncStatus.lastSync ? new Date(syncStatus.lastSync).toLocaleTimeString() : ''"></span>
+                    </small>
+                </div>
+
                 <!-- 批量保存按钮组 -->
                 <div class="d-flex align-items-center gap-2 me-3">
                     <!-- 保存按钮 -->
@@ -1927,6 +1962,20 @@
         // 直接嵌入JavaScript代码以避免路径问题
         function laeApp() {
             return {
+                // 🎯 IndexedDB本地缓存管理器
+                localDB: null,
+                useLocalCache: true, // 是否使用本地缓存（true=IndexedDB模式，false=直连云端）
+                syncStatus: {
+                    isInitializing: false,  // 是否正在初始化
+                    isDownloading: false,   // 是否正在下载云端数据
+                    isSyncing: false,       // 是否正在同步到云端
+                    lastSync: null,         // 最后同步时间
+                    hasChanges: false,      // 是否有未同步的更改
+                    changeCount: 0,         // 更改数量
+                    downloadProgress: '',   // 下载进度提示
+                    syncProgress: ''        // 同步进度提示
+                },
+
                 // 🎯 逻辑坐标系常量 - Single Source of Truth
                 // 所有计算逻辑基于此标准尺寸，与设备屏幕尺寸无关
                 LOGICAL_CANVAS: {
@@ -2193,9 +2242,18 @@
                 
                 // 初始化
                 async init() {
-                    console.log('Initializing LAE App... v9 - Debug Enhanced');
+                    console.log('🚀 Initializing LAE App... v9 - IndexedDB Enabled');
                     console.log('Initial view:', this.currentView);
                     console.log('Time slots configuration:', this.timeSlots);
+
+                    // ==========================================
+                    // 🎯 STEP 1: 初始化IndexedDB本地缓存
+                    // ==========================================
+                    if (this.useLocalCache) {
+                        await this.initLocalDatabase();
+                    } else {
+                        console.log('⚠️ 本地缓存已禁用，使用直连云端模式');
+                    }
 
                     // 🎯 加载PC端基准配置并检测设备
                     await this.loadPCCanvasConfig();
@@ -2204,11 +2262,19 @@
                     // 创建全局引用以便HTML onclick访问
                     window.laeAppInstance = this;
 
-                    // 添加页面刷新拦截（未保存变更时提醒）
+                    // 添加页面刷新拦截（未保存变更时提醒 + IndexedDB同步）
                     window.addEventListener('beforeunload', (event) => {
+                        // 检查批量保存系统的未保存变更
                         if (this.unsavedCount > 0) {
                             event.preventDefault();
                             event.returnValue = `您有 ${this.unsavedCount} 项未保存的变更，确定要离开吗？`;
+                            return event.returnValue;
+                        }
+
+                        // 检查IndexedDB的未同步更改
+                        if (this.useLocalCache && this.localDB && this.syncStatus.hasChanges) {
+                            event.preventDefault();
+                            event.returnValue = `您有 ${this.syncStatus.changeCount} 项未同步到云端的更改，建议先同步再关闭。`;
                             return event.returnValue;
                         }
                     });
@@ -2493,48 +2559,95 @@
                     const errors = [];
 
                     try {
-                        // 1. 处理删除操作
-                        for (const eventId of this.pendingChanges.deleted) {
-                            try {
-                                await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
-                                successCount++;
-                            } catch (error) {
-                                failCount++;
-                                errors.push(`删除事件 ${eventId} 失败: ${error.message}`);
-                            }
-                        }
+                        if (this.useLocalCache && this.localDB) {
+                            // 🎯 IndexedDB模式 - 写入本地数据库
+                            console.log('💾 批量保存到IndexedDB...');
 
-                        // 2. 处理新建操作
-                        for (const eventData of this.pendingChanges.created) {
-                            try {
-                                const { id, ...createData } = eventData; // 移除临时 ID
-                                const response = await fetch('/api/events/', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(createData)
-                                });
-                                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                                successCount++;
-                            } catch (error) {
-                                failCount++;
-                                errors.push(`创建事件失败: ${error.message}`);
+                            // 1. 处理删除操作
+                            for (const eventId of this.pendingChanges.deleted) {
+                                try {
+                                    await this.localDB.delete('scheduled_events', eventId);
+                                    successCount++;
+                                } catch (error) {
+                                    failCount++;
+                                    errors.push(`删除事件 ${eventId} 失败: ${error.message}`);
+                                }
                             }
-                        }
 
-                        // 3. 处理更新操作
-                        for (const eventData of this.pendingChanges.updated) {
-                            try {
-                                const { id, ...updateData } = eventData;
-                                const response = await fetch(`/api/events/${id}`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(updateData)
-                                });
-                                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                                successCount++;
-                            } catch (error) {
-                                failCount++;
-                                errors.push(`更新事件 ${eventData.id} 失败: ${error.message}`);
+                            // 2. 处理新建操作
+                            for (const eventData of this.pendingChanges.created) {
+                                try {
+                                    const { id, ...createData } = eventData; // 移除临时 ID
+                                    await this.localDB.insert('scheduled_events', createData);
+                                    successCount++;
+                                } catch (error) {
+                                    failCount++;
+                                    errors.push(`创建事件失败: ${error.message}`);
+                                }
+                            }
+
+                            // 3. 处理更新操作
+                            for (const eventData of this.pendingChanges.updated) {
+                                try {
+                                    const { id, ...updateData } = eventData;
+                                    await this.localDB.update('scheduled_events', id, updateData);
+                                    successCount++;
+                                } catch (error) {
+                                    failCount++;
+                                    errors.push(`更新事件 ${eventData.id} 失败: ${error.message}`);
+                                }
+                            }
+
+                            // 更新同步状态
+                            this.updateSyncStatus();
+
+                        } else {
+                            // 🌐 API模式 - 直接调用云端API
+                            console.log('🌐 批量保存到云端API...');
+
+                            // 1. 处理删除操作
+                            for (const eventId of this.pendingChanges.deleted) {
+                                try {
+                                    await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
+                                    successCount++;
+                                } catch (error) {
+                                    failCount++;
+                                    errors.push(`删除事件 ${eventId} 失败: ${error.message}`);
+                                }
+                            }
+
+                            // 2. 处理新建操作
+                            for (const eventData of this.pendingChanges.created) {
+                                try {
+                                    const { id, ...createData } = eventData; // 移除临时 ID
+                                    const response = await fetch('/api/events/', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(createData)
+                                    });
+                                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                                    successCount++;
+                                } catch (error) {
+                                    failCount++;
+                                    errors.push(`创建事件失败: ${error.message}`);
+                                }
+                            }
+
+                            // 3. 处理更新操作
+                            for (const eventData of this.pendingChanges.updated) {
+                                try {
+                                    const { id, ...updateData } = eventData;
+                                    const response = await fetch(`/api/events/${id}`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(updateData)
+                                    });
+                                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                                    successCount++;
+                                } catch (error) {
+                                    failCount++;
+                                    errors.push(`更新事件 ${eventData.id} 失败: ${error.message}`);
+                                }
                             }
                         }
 
@@ -2611,15 +2724,61 @@
                     }
                 },
 
-                // API调用方法
+                // API调用方法（支持IndexedDB和API模式）
                 async apiCall(endpoint, options = {}) {
                     try {
+                        const method = options.method || 'GET';
                         console.log('🌐 API调用:', {
                             endpoint,
-                            method: options.method || 'GET',
-                            body: options.body
+                            method,
+                            body: options.body,
+                            mode: this.useLocalCache && this.localDB ? 'IndexedDB' : 'API'
                         });
 
+                        // 🎯 IndexedDB模式 - 拦截写入操作
+                        if (this.useLocalCache && this.localDB && ['POST', 'PUT', 'DELETE'].includes(method)) {
+                            const data = options.body ? JSON.parse(options.body) : null;
+
+                            // 解析endpoint和资源
+                            const match = endpoint.match(/\/(events|activities|domains|activity-types|schedules)(?:\/(\d+))?/);
+                            if (match) {
+                                const resource = match[1];
+                                const id = match[2] ? parseInt(match[2]) : null;
+
+                                // 映射资源名到store名称
+                                const storeMap = {
+                                    'events': 'scheduled_events',
+                                    'activities': 'activities',
+                                    'domains': 'domains',
+                                    'activity-types': 'activity_types',
+                                    'schedules': 'schedules'
+                                };
+                                const storeName = storeMap[resource];
+
+                                if (storeName) {
+                                    console.log(`💾 使用IndexedDB: ${method} ${storeName} ${id || ''}`);
+
+                                    if (method === 'POST') {
+                                        const result = await this.localDB.insert(storeName, data);
+                                        this.updateSyncStatus();
+                                        console.log('✅ IndexedDB插入成功:', result);
+                                        return result;
+                                    } else if (method === 'PUT' && id) {
+                                        const result = await this.localDB.update(storeName, id, data);
+                                        this.updateSyncStatus();
+                                        console.log('✅ IndexedDB更新成功:', result);
+                                        return result;
+                                    } else if (method === 'DELETE' && id) {
+                                        await this.localDB.delete(storeName, id);
+                                        this.updateSyncStatus();
+                                        console.log('✅ IndexedDB删除成功');
+                                        return { success: true };
+                                    }
+                                }
+                            }
+                        }
+
+                        // 🌐 API模式 - 直接调用云端API（或读取操作）
                         const response = await fetch(`/api${endpoint}`, {
                             headers: {
                                 'Content-Type': 'application/json',
@@ -2960,18 +3119,26 @@
                 async deleteDomain(domainId) {
                     if (confirm('确定要删除这个领域吗？这将同时删除所有子领域。')) {
                         try {
-                            const response = await fetch(`/api/domains/${domainId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Content-Type': 'application/json',
+                            if (this.useLocalCache && this.localDB) {
+                                // 🎯 IndexedDB模式 - 从本地数据库删除
+                                await this.localDB.delete('domains', domainId);
+                                this.updateSyncStatus();
+                                console.log('✅ Domain deleted successfully (本地)');
+                            } else {
+                                // 🌐 API模式 - 直接调用云端API
+                                const response = await fetch(`/api/domains/${domainId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    }
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
                                 }
-                            });
 
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                                console.log('✅ Domain deleted successfully (云端)');
                             }
-
-                            console.log('✅ Domain deleted successfully');
 
                             // 重新加载domains数据
                             await this.loadDomains();
@@ -3121,18 +3288,26 @@
                 async deleteSchedule(scheduleId) {
                     if (confirm('确定要删除这个日程吗？')) {
                         try {
-                            const response = await fetch(`/api/schedules/${scheduleId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Content-Type': 'application/json',
+                            if (this.useLocalCache && this.localDB) {
+                                // 🎯 IndexedDB模式 - 从本地数据库删除
+                                await this.localDB.delete('schedules', scheduleId);
+                                this.updateSyncStatus();
+                                console.log('✅ Schedule deleted successfully (本地)');
+                            } else {
+                                // 🌐 API模式 - 直接调用云端API
+                                const response = await fetch(`/api/schedules/${scheduleId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    }
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
                                 }
-                            });
 
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                                console.log('✅ Schedule deleted successfully (云端)');
                             }
-
-                            console.log('✅ Schedule deleted successfully');
 
                             // 重新加载该Domain的Schedules
                             await this.loadDomainSchedules(this.currentDomainId);
@@ -3246,18 +3421,26 @@
                 async deleteActivityType(typeId) {
                     if (confirm('确定要删除这个活动类型吗？这将同时删除所有子类型。')) {
                         try {
-                            const response = await fetch(`/api/activity-types/${typeId}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Content-Type': 'application/json',
+                            if (this.useLocalCache && this.localDB) {
+                                // 🎯 IndexedDB模式 - 从本地数据库删除
+                                await this.localDB.delete('activity_types', typeId);
+                                this.updateSyncStatus();
+                                console.log('✅ ActivityType deleted successfully (本地)');
+                            } else {
+                                // 🌐 API模式 - 直接调用云端API
+                                const response = await fetch(`/api/activity-types/${typeId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    }
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
                                 }
-                            });
 
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                                console.log('✅ ActivityType deleted successfully (云端)');
                             }
-
-                            console.log('✅ ActivityType deleted successfully');
 
                             // 重新加载activity types数据
                             await this.loadActivityTypes();
@@ -3575,16 +3758,73 @@
                 async loadWeekSchedule() {
                     try {
                         const targetDate = this.weekDates[0]; // 周一
-                        console.log('Loading week schedule for:', targetDate);
-                        const data = await this.apiCall(`/calendar/week/${targetDate}`);
+                        const startDate = this.weekDates[0];
+                        const endDate = this.weekDates[6];
 
-                        // 转换数据格式以便查找
+                        console.log(`📅 加载周数据: ${startDate} ~ ${endDate}`);
+
+                        // 🎯 使用IndexedDB本地缓存（如果启用）
+                        let events = [];
+                        if (this.useLocalCache && this.localDB) {
+                            console.log('📦 从IndexedDB加载数据...');
+                            const startTime = Date.now();
+
+                            events = await this.localDB.query('scheduled_events', {
+                                start_date: startDate,
+                                end_date: endDate
+                            });
+
+                            const elapsed = Date.now() - startTime;
+                            console.log(`✅ IndexedDB加载完成: ${events.length}条记录, 用时${elapsed}ms`);
+                        } else {
+                            // 回退到API模式
+                            console.log('🌐 从API加载数据...');
+                            const data = await this.apiCall(`/calendar/week/${targetDate}`);
+                            events = [];
+                            data.schedule.forEach(day => {
+                                Object.values(day.slots).forEach(slot => {
+                                    if (slot) {
+                                        if (Array.isArray(slot)) {
+                                            events.push(...slot);
+                                        } else {
+                                            events.push(slot);
+                                        }
+                                    }
+                                });
+                            });
+                        }
+
+                        // 构建weekSchedule对象
                         this.weekSchedule = {};
-                        data.schedule.forEach(day => {
-                            this.weekSchedule[day.date] = day.slots;
+                        const timeSlots = [21, 22, 51, 52, 71];
+
+                        // 初始化所有时间槽
+                        this.weekDates.forEach(date => {
+                            this.weekSchedule[date] = {};
+                            timeSlots.forEach(slot => {
+                                this.weekSchedule[date][slot] = null;
+                            });
                         });
-                        console.log('Week schedule loaded:', this.weekSchedule);
-                        console.log('Schedule data structure:', data);
+
+                        // 填充事件数据
+                        events.forEach(event => {
+                            const dateKey = event.event_date;
+                            if (this.weekSchedule[dateKey]) {
+                                const slotKey = event.time_slot;
+                                // 处理并排摆放
+                                if (event.canvas_position_y > 0) {
+                                    if (!Array.isArray(this.weekSchedule[dateKey][slotKey])) {
+                                        const existing = this.weekSchedule[dateKey][slotKey];
+                                        this.weekSchedule[dateKey][slotKey] = existing ? [existing] : [];
+                                    }
+                                    this.weekSchedule[dateKey][slotKey].push(event);
+                                } else {
+                                    this.weekSchedule[dateKey][slotKey] = event;
+                                }
+                            }
+                        });
+
+                        console.log('✅ 周数据加载完成:', this.weekSchedule);
 
                         // 同时加载当前周的Schedule时间条数据
                         await this.loadWeeklySchedules();
@@ -4290,25 +4530,34 @@
 
                         console.log('准备创建事件数据:', eventData);
 
-                        // 调用API创建事件
-                        const response = await fetch('/api/scheduled-events/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(eventData)
-                        });
+                        let newEvent;
 
-                        console.log('API响应状态:', response.status);
+                        if (this.useLocalCache && this.localDB) {
+                            // 🎯 IndexedDB模式 - 写入本地数据库
+                            newEvent = await this.localDB.insert('scheduled_events', eventData);
+                            this.updateSyncStatus();
+                            console.log('✅ 事件创建成功(本地):', newEvent);
+                        } else {
+                            // 🌐 API模式 - 直接调用云端API
+                            const response = await fetch('/api/scheduled-events/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(eventData)
+                            });
 
-                        if (!response.ok) {
-                            const error = await response.text();
-                            console.error('创建事件失败:', error);
-                            throw new Error(`创建事件失败 (${response.status}): ${error}`);
+                            console.log('API响应状态:', response.status);
+
+                            if (!response.ok) {
+                                const error = await response.text();
+                                console.error('创建事件失败:', error);
+                                throw new Error(`创建事件失败 (${response.status}): ${error}`);
+                            }
+
+                            newEvent = await response.json();
+                            console.log('✅ 事件创建成功(云端):', newEvent);
                         }
-
-                        const newEvent = await response.json();
-                        console.log('✅ 事件创建成功:', newEvent);
 
                         // 刷新周视图数据
                         await this.loadWeekSchedule();
@@ -5341,21 +5590,30 @@
                         });
 
                         try {
-                            // 通过API创建新事件
-                            const response = await fetch('/api/events/', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify(newCardData)
-                            });
+                            let newEvent;
 
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                            if (this.useLocalCache && this.localDB) {
+                                // 🎯 IndexedDB模式 - 写入本地数据库
+                                newEvent = await this.localDB.insert('scheduled_events', newCardData);
+                                this.updateSyncStatus();
+                                console.log('✅ 卡片复制成功(本地):', newEvent);
+                            } else {
+                                // 🌐 API模式 - 直接调用云端API
+                                const response = await fetch('/api/events/', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify(newCardData)
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+
+                                newEvent = await response.json();
+                                console.log('✅ 卡片复制成功(云端):', newEvent);
                             }
-
-                            const newEvent = await response.json();
-                            console.log('✅ 卡片复制成功:', newEvent);
 
                             // 直接将新卡片添加到本地数组，避免重新加载导致其他卡片丢失
                             const newCanvasCard = {
@@ -6038,19 +6296,28 @@
                     };
 
                     try {
-                        const response = await fetch('/api/events/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(eventData)
-                        });
+                        if (this.useLocalCache && this.localDB) {
+                            // 🎯 IndexedDB模式 - 写入本地数据库
+                            await this.localDB.insert('scheduled_events', eventData);
+                            this.updateSyncStatus();
+                            console.log('✅ Event created from sidebar drop (本地)');
+                        } else {
+                            // 🌐 API模式 - 直接调用云端API
+                            const response = await fetch('/api/events/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(eventData)
+                            });
 
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            console.log('✅ Event created from sidebar drop (云端)');
                         }
 
-                        console.log('✅ Event created from sidebar drop');
                         await this.loadWeekSchedule();
 
                     } catch (error) {
@@ -6115,24 +6382,34 @@
                             canvas_position_y: newPosition.canvasY
                         };
 
-                        // 发送API请求更新事件
                         console.log('📤 Sending update data:', updateData);
-                        const response = await fetch(`/api/events/${eventId}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(updateData)
-                        });
 
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            console.error('❌ API Error Details:', {
-                                status: response.status,
-                                statusText: response.statusText,
-                                body: errorText
+                        if (this.useLocalCache && this.localDB) {
+                            // 🎯 IndexedDB模式 - 更新本地数据库
+                            await this.localDB.update('scheduled_events', parseInt(eventId), updateData);
+                            this.updateSyncStatus();
+                            console.log('✅ Event updated in IndexedDB');
+                        } else {
+                            // 🌐 API模式 - 直接调用云端API
+                            const response = await fetch(`/api/events/${eventId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(updateData)
                             });
-                            throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
+
+                            if (!response.ok) {
+                                const errorText = await response.text();
+                                console.error('❌ API Error Details:', {
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    body: errorText
+                                });
+                                throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
+                            }
+
+                            console.log('✅ Event updated successfully (云端)');
                         }
 
                         console.log('✅ Event updated successfully');
@@ -6193,19 +6470,28 @@
                                 canvas_position_y: 0
                             };
 
-                            const response = await fetch(`/api/events/${eventId}`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify(updateData)
-                            });
+                            if (this.useLocalCache && this.localDB) {
+                                // 🎯 IndexedDB模式 - 更新本地数据库
+                                await this.localDB.update('scheduled_events', parseInt(eventId), updateData);
+                                this.updateSyncStatus();
+                                console.log('✅ Event moved to pending area (本地)');
+                            } else {
+                                // 🌐 API模式 - 直接调用云端API
+                                const response = await fetch(`/api/events/${eventId}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify(updateData)
+                                });
 
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+
+                                console.log('✅ Event moved to pending area (云端)');
                             }
 
-                            console.log('✅ Event moved to pending area');
                             await this.loadWeekSchedule();
                         } else {
                             // 待定区域内的重新排序
@@ -7562,11 +7848,141 @@
 
                     console.warn('🚨 Unexpected time format:', timeString, 'length:', timeString.length);
                     return timeString;
+                },
+
+                // ==========================================
+                // 🎯 IndexedDB本地缓存相关方法
+                // ==========================================
+
+                // 初始化本地数据库
+                async initLocalDatabase() {
+                    try {
+                        this.syncStatus.isInitializing = true;
+                        console.log('🔧 正在初始化IndexedDB...');
+
+                        // 创建LocalDBManager实例
+                        this.localDB = new LocalDBManager();
+                        await this.localDB.init();
+
+                        // 检查是否需要下载数据
+                        const lastSync = await this.localDB.getMetadata('last_sync');
+                        const isSynced = await this.localDB.getMetadata('is_synced');
+
+                        if (!lastSync || !isSynced) {
+                            console.log('📥 首次启动，开始下载云端数据...');
+                            await this.downloadCloudData();
+                        } else {
+                            console.log(`✅ 使用本地缓存数据（最后同步: ${lastSync}）`);
+                            this.syncStatus.lastSync = lastSync;
+
+                            // 检查是否有未同步的更改
+                            const status = this.localDB.getSyncStatus();
+                            this.syncStatus.hasChanges = status.hasChanges;
+                            this.syncStatus.changeCount = status.changeCount;
+
+                            if (this.syncStatus.hasChanges) {
+                                console.warn(`⚠️ 检测到 ${this.syncStatus.changeCount} 项未同步的更改`);
+                            }
+                        }
+
+                        this.syncStatus.isInitializing = false;
+                        console.log('✅ IndexedDB初始化完成');
+                        return true;
+
+                    } catch (error) {
+                        this.syncStatus.isInitializing = false;
+                        console.error('❌ IndexedDB初始化失败:', error);
+                        alert('本地缓存初始化失败，将使用直连云端模式。\n\n错误: ' + error.message);
+                        this.useLocalCache = false;
+                        return false;
+                    }
+                },
+
+                // 从云端下载完整数据
+                async downloadCloudData() {
+                    try {
+                        this.syncStatus.isDownloading = true;
+                        this.syncStatus.downloadProgress = '正在下载云端数据...';
+
+                        const result = await this.localDB.downloadFromCloud();
+
+                        this.syncStatus.isDownloading = false;
+                        this.syncStatus.downloadProgress = '';
+                        this.syncStatus.lastSync = new Date().toISOString();
+
+                        alert(`✅ 数据下载完成！\n\n` +
+                              `Events: ${result.counts.events}\n` +
+                              `Domains: ${result.counts.domains}\n` +
+                              `Types: ${result.counts.types}\n` +
+                              `Schedules: ${result.counts.schedules}\n\n` +
+                              `用时: ${result.elapsed}ms`);
+
+                        return result;
+
+                    } catch (error) {
+                        this.syncStatus.isDownloading = false;
+                        this.syncStatus.downloadProgress = '';
+                        console.error('❌ 下载云端数据失败:', error);
+                        throw error;
+                    }
+                },
+
+                // 同步本地更改到云端
+                async syncToCloud() {
+                    if (!this.localDB || !this.syncStatus.hasChanges) {
+                        alert('无需同步，本地数据未修改');
+                        return;
+                    }
+
+                    const confirmed = confirm(
+                        `即将同步 ${this.syncStatus.changeCount} 项更改到云端。\n\n` +
+                        `确定要继续吗？`
+                    );
+
+                    if (!confirmed) return;
+
+                    try {
+                        this.syncStatus.isSyncing = true;
+                        this.syncStatus.syncProgress = `正在同步 ${this.syncStatus.changeCount} 项更改...`;
+
+                        const result = await this.localDB.syncToCloud();
+
+                        this.syncStatus.isSyncing = false;
+                        this.syncStatus.syncProgress = '';
+
+                        if (result.success) {
+                            this.syncStatus.hasChanges = false;
+                            this.syncStatus.changeCount = 0;
+                            this.syncStatus.lastSync = new Date().toISOString();
+
+                            alert(`✅ 同步完成！\n\n同步记录数: ${result.synced}\n用时: ${result.elapsed}ms`);
+                        } else {
+                            alert(`❌ 同步失败: ${result.error}`);
+                        }
+
+                        return result;
+
+                    } catch (error) {
+                        this.syncStatus.isSyncing = false;
+                        this.syncStatus.syncProgress = '';
+                        console.error('❌ 同步失败:', error);
+                        alert('同步失败: ' + error.message);
+                    }
+                },
+
+                // 更新同步状态
+                updateSyncStatus() {
+                    if (!this.localDB) return;
+
+                    const status = this.localDB.getSyncStatus();
+                    this.syncStatus.hasChanges = status.hasChanges;
+                    this.syncStatus.changeCount = status.changeCount;
                 }
             }
         }
 
-        // 全局辅助函数
+        // 全局辅助函数（向后兼容V1，直连API）
+        // 注意：此函数用于V1视图，不使用IndexedDB缓存
         async function deleteActivity(activityId) {
             if (confirm('确定要删除这个活动吗？这将删除所有相关的日程安排。')) {
                 try {
@@ -7576,7 +7992,7 @@
                             'Content-Type': 'application/json'
                         }
                     });
-                    
+
                     // 刷新页面
                     location.reload();
                 } catch (error) {
